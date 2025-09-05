@@ -1,7 +1,7 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Provider as PaperProvider } from "react-native-paper";
+import { Provider as PaperProvider, DefaultTheme } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -14,9 +14,12 @@ import ProfessoresScreen from "./src/screens/ProfessoresScreen";
 import DisciplinasScreen from "./src/screens/DisciplinasScreen";
 import NotasScreen from "./src/screens/NotasScreen";
 
-// Tema personalizado com cores acadêmicas suaves
+// Tema personalizado herdando do DefaultTheme
 const theme = {
+  ...DefaultTheme,
+  roundness: 12,
   colors: {
+    ...DefaultTheme.colors,
     primary: "#6366f1", // Indigo suave
     accent: "#8b5cf6", // Violeta suave
     background: "#f8fafc", // Cinza muito claro
@@ -27,25 +30,6 @@ const theme = {
     onSurface: "#1e293b",
     disabled: "#cbd5e1",
     notification: "#ef4444",
-  },
-  roundness: 12,
-  fonts: {
-    regular: {
-      fontFamily: "System",
-      fontWeight: "400",
-    },
-    medium: {
-      fontFamily: "System",
-      fontWeight: "500",
-    },
-    light: {
-      fontFamily: "System",
-      fontWeight: "300",
-    },
-    thin: {
-      fontFamily: "System",
-      fontWeight: "100",
-    },
   },
 };
 
@@ -59,7 +43,7 @@ export default function App() {
           <StatusBar style="dark" backgroundColor={theme.colors.background} />
           <Tab.Navigator
             screenOptions={({ route }) => ({
-              tabBarIcon: ({ focused, color, size }) => {
+              tabBarIcon: ({ color, size }) => {
                 let iconName;
 
                 switch (route.name) {
@@ -85,9 +69,7 @@ export default function App() {
                     iconName = "circle";
                 }
 
-                return (
-                  <MaterialIcons name={iconName} size={size} color={color} />
-                );
+                return <MaterialIcons name={iconName} size={size} color={color} />;
               },
               tabBarActiveTintColor: theme.colors.primary,
               tabBarInactiveTintColor: theme.colors.placeholder,
