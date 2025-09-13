@@ -1,4 +1,5 @@
-import { StyleSheet, Dimensions } from 'react-native';
+import { StyleSheet, Dimensions, Platform } from 'react-native';
+import { getBottomSpace } from 'react-native-iphone-x-helper'; // <- instale este pacote
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,69 +35,86 @@ export const getResponsiveColumns = () => {
   return 3;
 };
 
+// Cores do tema
+export const colors = {
+  primary: '#6366f1',
+  secondary: '#8b5cf6',
+  success: '#22c55e',
+  warning: '#f59e0b',
+  error: '#ef4444',
+  info: '#06b6d4',
+
+  background: '#f8fafc',
+  surface: '#ffffff',
+
+  text: '#1e293b',
+  textSecondary: '#64748b',
+  textLight: '#94a3b8',
+
+  border: '#e2e8f0',
+  borderLight: '#f1f5f9',
+
+  overlay: 'rgba(0, 0, 0, 0.5)',
+};
+
 // Estilos globais
 export const globalStyles = StyleSheet.create({
-  // Container principal
   container: {
     flex: 1,
     padding: getResponsivePadding(),
+    paddingBottom: 110 + getBottomSpace(),
   },
-  
-  // Containers responsivos
+
   responsiveContainer: {
     flex: 1,
     padding: getResponsivePadding(),
     maxWidth: isDesktop ? 1200 : '100%',
     alignSelf: 'center',
     width: '100%',
+    paddingBottom: 100, // previne corte de conteúdo
   },
-  
-  // Grid responsivo
+
   responsiveGrid: {
     flexDirection: isMobile ? 'column' : 'row',
     flexWrap: 'wrap',
     gap: 16,
   },
-  
-  // Item do grid
+
   gridItem: {
     flex: isMobile ? 1 : isTablet ? 0.48 : 0.31,
     minWidth: isMobile ? '100%' : isTablet ? '45%' : '30%',
   },
-  
-  // Cards responsivos
+
   responsiveCard: {
     marginBottom: 16,
     elevation: 2,
     borderRadius: 12,
+    backgroundColor: colors.surface,
   },
-  
-  // Texto responsivo
+
   responsiveTitle: {
     fontSize: getResponsiveFontSize(24),
     fontWeight: '600',
     marginBottom: 8,
   },
-  
+
   responsiveSubtitle: {
     fontSize: getResponsiveFontSize(18),
     fontWeight: '500',
     marginBottom: 6,
   },
-  
+
   responsiveBody: {
     fontSize: getResponsiveFontSize(14),
     lineHeight: getResponsiveFontSize(20),
   },
-  
-  // Botões responsivos
+
   responsiveButton: {
     minHeight: 48,
     justifyContent: 'center',
     borderRadius: 8,
   },
-  
-  // Modal responsivo
+
   responsiveModal: {
     margin: getResponsivePadding(),
     padding: getResponsivePadding(),
@@ -106,29 +124,48 @@ export const globalStyles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
   },
-  
-  // Input responsivo
+
   responsiveInput: {
     marginBottom: 16,
     fontSize: getResponsiveFontSize(14),
   },
-  
-  // Barra de busca responsiva
+
   responsiveSearchbar: {
     marginBottom: 16,
     elevation: 2,
     borderRadius: 8,
   },
-  
-  // FAB responsivo
+
   responsiveFAB: {
     position: 'absolute',
     margin: getResponsivePadding(),
     right: 0,
     bottom: 0,
   },
-  
-  // Espaçamentos
+
+  // 🚀 Bottom bar ajustada
+  bottomBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingBottom: 0,
+    height: 80 + getBottomSpace(), // Aumenta a altura da bottomBar
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    zIndex: 1000, // garante sobreposição
+    paddingBottom: (getBottomSpace() || 10) + 40, // Aumenta ainda mais o padding extra
+  },
+
   spacing: {
     xs: 4,
     sm: 8,
@@ -136,135 +173,41 @@ export const globalStyles = StyleSheet.create({
     lg: 24,
     xl: 32,
   },
-  
-  // Sombras
+
   shadow: {
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
   },
-  
-  // Animações
-  fadeIn: {
-    opacity: 1,
-  },
-  
-  fadeOut: {
-    opacity: 0,
-  },
-  
-  // Utilitários
-  centerContent: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  
-  spaceBetween: {
-    justifyContent: 'space-between',
-  },
-  
-  spaceAround: {
-    justifyContent: 'space-around',
-  },
-  
-  flexRow: {
-    flexDirection: 'row',
-  },
-  
-  flexColumn: {
-    flexDirection: 'column',
-  },
-  
-  flex1: {
-    flex: 1,
-  },
-  
-  // Estados de loading
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  
-  // Estados vazios
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  
-  emptyText: {
-    fontSize: getResponsiveFontSize(16),
-    textAlign: 'center',
-    opacity: 0.7,
-    marginTop: 16,
-  },
+
+  fadeIn: { opacity: 1 },
+  fadeOut: { opacity: 0 },
+
+  centerContent: { justifyContent: 'center', alignItems: 'flex-end' },
+  spaceBetween: { justifyContent: 'space-between' },
+  spaceAround: { justifyContent: 'space-around' },
+  flexRow: { flexDirection: 'row' },
+  flexColumn: { flexDirection: 'column' },
+  flex1: { flex: 1 },
+
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
+  emptyText: { fontSize: getResponsiveFontSize(16), textAlign: 'center', opacity: 0.7, marginTop: 16 },
 });
 
-// Cores do tema
-export const colors = {
-  primary: '#6366f1',
-  primaryLight: '#818cf8',
-  primaryDark: '#4f46e5',
-  
-  secondary: '#8b5cf6',
-  secondaryLight: '#a78bfa',
-  secondaryDark: '#7c3aed',
-  
-  success: '#22c55e',
-  successLight: '#4ade80',
-  successDark: '#16a34a',
-  
-  warning: '#f59e0b',
-  warningLight: '#fbbf24',
-  warningDark: '#d97706',
-  
-  error: '#ef4444',
-  errorLight: '#f87171',
-  errorDark: '#dc2626',
-  
-  info: '#06b6d4',
-  infoLight: '#22d3ee',
-  infoDark: '#0891b2',
-  
-  background: '#f8fafc',
-  surface: '#ffffff',
-  
-  text: '#1e293b',
-  textSecondary: '#64748b',
-  textLight: '#94a3b8',
-  
-  border: '#e2e8f0',
-  borderLight: '#f1f5f9',
-  
-  overlay: 'rgba(0, 0, 0, 0.5)',
-};
-
-// Função para obter cor com opacidade
+// Funções utilitárias
 export const getColorWithOpacity = (color, opacity) => {
   return color + Math.round(opacity * 255).toString(16).padStart(2, '0');
 };
 
-// Função para obter estilos de elevação
-export const getElevationStyle = (elevation) => {
-  return {
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: elevation / 2,
-    },
-    shadowOpacity: 0.1 + (elevation * 0.02),
-    shadowRadius: elevation,
-    elevation: elevation,
-  };
-};
+export const getElevationStyle = (elevation) => ({
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: elevation / 2 },
+  shadowOpacity: 0.1 + elevation * 0.02,
+  shadowRadius: elevation,
+  elevation,
+});
 
 export default globalStyles;
-

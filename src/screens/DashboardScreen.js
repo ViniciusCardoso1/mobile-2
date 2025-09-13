@@ -290,24 +290,7 @@ const DashboardScreen = () => {
         </Card>
       )}
 
-      {chartData.evolucaoNotas.length > 0 && (
-        <Card style={styles.chartCard}>
-          <Card.Content>
-            <Text style={styles.chartTitle}>Evolução das Médias</Text>
-            <LineChart
-              data={{
-                labels: ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"],
-                datasets: [{ data: chartData.evolucaoNotas }],
-              }}
-              width={screenWidth - 64}
-              height={220}
-              chartConfig={chartConfig}
-              style={styles.chart}
-              bezier
-            />
-          </Card.Content>
-        </Card>
-      )}
+    
 
       {chartData.statusAlunos.length > 0 &&
         chartData.statusAlunos.some((item) => item.population > 0) && (
@@ -360,30 +343,7 @@ const DashboardScreen = () => {
         </Card>
       )}
 
-      {/* Resumo rápido */}
-      <Card style={styles.summaryCard}>
-        <Card.Content>
-          <Text style={styles.summaryTitle}>Resumo Rápido</Text>
-          <View style={styles.summaryContent}>
-            <Text style={styles.summaryText}>
-              • Sistema com {stats.totalTurmas} turmas ativas
-            </Text>
-            <Text style={styles.summaryText}>
-              • {stats.totalAlunos} alunos matriculados
-            </Text>
-            <Text style={styles.summaryText}>
-              • {stats.totalProfessores} professores cadastrados
-            </Text>
-            <Text style={styles.summaryText}>
-              • {stats.totalDisciplinas} disciplinas oferecidas
-            </Text>
-            <Text style={styles.summaryText}>
-              • Média geral de {stats.mediaGeral.toFixed(1)} pontos
-            </Text>
-          </View>
-        </Card.Content>
-      </Card>
-
+      
       <View style={styles.bottomSpacing} />
     </ScrollView>
   );

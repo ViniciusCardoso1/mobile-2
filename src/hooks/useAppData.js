@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import StorageService from '../services/StorageService';
 
-/**
- * Hook personalizado para gerenciar dados da aplicação
- * Centraliza o estado e operações CRUD para todas as entidades
- */
 export const useAppData = () => {
   const [data, setData] = useState({
     turmas: [],
@@ -24,7 +20,7 @@ export const useAppData = () => {
   
   const [initialized, setInitialized] = useState(false);
 
-  // Função para carregar dados de uma entidade específica
+  // Carregar dados de uma entidade específica
   const loadEntityData = useCallback(async (entityKey) => {
     setLoading(prev => ({ ...prev, [entityKey]: true }));
     try {
@@ -39,13 +35,13 @@ export const useAppData = () => {
     }
   }, []);
 
-  // Função para carregar todos os dados
+  // Carregar todos os dados
   const loadAllData = useCallback(async () => {
     const promises = Object.keys(data).map(key => loadEntityData(key));
     await Promise.all(promises);
   }, [loadEntityData, data]);
 
-  // Função para adicionar item
+  // CRUD
   const addItem = useCallback(async (entityKey, item) => {
     try {
       const newItem = await StorageService.addItem(
@@ -54,7 +50,7 @@ export const useAppData = () => {
       );
       setData(prev => ({
         ...prev,
-        [entityKey]: [...prev[entityKey], newItem]
+        [entityKey]: [...prev[entityKey], newItem],
       }));
       return newItem;
     } catch (error) {
@@ -63,7 +59,6 @@ export const useAppData = () => {
     }
   }, []);
 
-  // Função para atualizar item
   const updateItem = useCallback(async (entityKey, id, updatedItem) => {
     try {
       const updated = await StorageService.updateItem(
@@ -76,7 +71,7 @@ export const useAppData = () => {
           ...prev,
           [entityKey]: prev[entityKey].map(item => 
             item.id === id ? updated : item
-          )
+          ),
         }));
       }
       return updated;
@@ -86,7 +81,6 @@ export const useAppData = () => {
     }
   }, []);
 
-  // Função para deletar item
   const deleteItem = useCallback(async (entityKey, id) => {
     try {
       const success = await StorageService.deleteItem(
@@ -96,7 +90,7 @@ export const useAppData = () => {
       if (success) {
         setData(prev => ({
           ...prev,
-          [entityKey]: prev[entityKey].filter(item => item.id !== id)
+          [entityKey]: prev[entityKey].filter(item => item.id !== id),
         }));
       }
       return success;
@@ -106,17 +100,15 @@ export const useAppData = () => {
     }
   }, []);
 
-  // Função para buscar item por ID
+  // Helpers
   const getItemById = useCallback((entityKey, id) => {
     return data[entityKey].find(item => item.id === id) || null;
   }, [data]);
 
-  // Função para filtrar itens
   const filterItems = useCallback((entityKey, filterFn) => {
     return data[entityKey].filter(filterFn);
   }, [data]);
 
-  // Função para buscar itens por texto
   const searchItems = useCallback((entityKey, searchText, searchFields) => {
     if (!searchText) return data[entityKey];
     
@@ -128,11 +120,12 @@ export const useAppData = () => {
     );
   }, [data]);
 
-  // Estatísticas gerais
+  // Estatísticas
   const getStats = useCallback(() => {
     const totalNotas = data.notas.length;
-    const mediaGeral = totalNotas > 0 ? 
-      data.notas.reduce((sum, nota) => sum + nota.nota, 0) / totalNotas : 0;
+    const mediaGeral = totalNotas > 0 
+      ? data.notas.reduce((sum, nota) => sum + nota.nota, 0) / totalNotas 
+      : 0;
     
     const aprovacoes = data.notas.filter(nota => nota.nota >= 7).length;
     const reprovacoes = data.notas.filter(nota => nota.nota < 7).length;
@@ -150,29 +143,16 @@ export const useAppData = () => {
     };
   }, [data]);
 
-  // Função para obter nome de entidades relacionadas
+  // Nome de entidades relacionadas
   const getRelatedEntityName = useCallback((entityKey, id) => {
     const item = getItemById(entityKey, id);
     if (!item) return 'Não encontrado';
-    
-    switch (entityKey) {
-      case 'alunos':
-        return item.nome;
-      case 'professores':
-        return item.nome;
-      case 'disciplinas':
-        return item.nome;
-      case 'turmas':
-        return item.nome;
-      default:
-        return item.nome || item.titulo || 'Sem nome';
-    }
+    return item.nome || item.titulo || 'Sem nome';
   }, [getItemById]);
 
-  // Função para validar relacionamentos
+  // Validação
   const validateRelationships = useCallback((entityKey, item) => {
     const errors = [];
-    
     switch (entityKey) {
       case 'turmas':
         if (item.professor && !getItemById('professores', item.professor)) {
@@ -188,11 +168,10 @@ export const useAppData = () => {
         }
         break;
     }
-    
     return errors;
   }, [getItemById]);
 
-  // Inicializar dados na primeira execução
+  // Inicializar dados
   useEffect(() => {
     const initializeData = async () => {
       if (!initialized) {
@@ -201,16 +180,14 @@ export const useAppData = () => {
         setInitialized(true);
       }
     };
-    
     initializeData();
   }, [initialized, loadAllData]);
 
-  // Função para refresh dos dados
+  // Controle de dados
   const refreshData = useCallback(async () => {
     await loadAllData();
   }, [loadAllData]);
 
-  // Função para limpar todos os dados
   const clearAllData = useCallback(async () => {
     try {
       const promises = Object.keys(StorageService.KEYS).map(key => 
@@ -231,27 +208,18 @@ export const useAppData = () => {
   }, []);
 
   return {
-    // Estado
     data,
     loading,
     initialized,
-    
-    // Operações CRUD
     addItem,
     updateItem,
     deleteItem,
     getItemById,
-    
-    // Busca e filtros
     filterItems,
     searchItems,
-    
-    // Utilitários
     getStats,
     getRelatedEntityName,
     validateRelationships,
-    
-    // Controle de dados
     loadEntityData,
     loadAllData,
     refreshData,
@@ -260,4 +228,3 @@ export const useAppData = () => {
 };
 
 export default useAppData;
-

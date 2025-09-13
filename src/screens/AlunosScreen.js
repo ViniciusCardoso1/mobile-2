@@ -1,22 +1,6 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  Alert,
-  TouchableOpacity,
-} from "react-native";
-import {
-  Card,
-  Title,
-  Paragraph,
-  FAB,
-  Portal,
-  Modal,
-  TextInput,
-  Button,
-  ActivityIndicator,
-} from "react-native-paper";
+import { View, StyleSheet, FlatList, Alert } from "react-native";
+import { Card, Title, Paragraph, FAB, Portal, Modal, TextInput, Button, ActivityIndicator } from "react-native-paper";
 import { useForm, Controller } from "react-hook-form";
 import StorageService from "../services/StorageService";
 
@@ -27,20 +11,19 @@ export default function AlunosScreen() {
   const [visible, setVisible] = useState(false);
   const [editingAluno, setEditingAluno] = useState(null);
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-  } = useForm();
+  const { control, handleSubmit, reset } = useForm();
 
-  // 🔹 Carregar alunos do Storage
   const loadAlunos = async () => {
+    setLoading(true);
     try {
+      await StorageService.initializeSampleData();
       const data = await StorageService.loadData(StorageService.KEYS.ALUNOS);
-      setAlunos(data || []); // garante array mesmo que null
+      setAlunos(data || []);
     } catch (error) {
       Alert.alert("Erro", "Não foi possível carregar os alunos");
       setAlunos([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,17 +31,13 @@ export default function AlunosScreen() {
     loadAlunos();
   }, []);
 
-  // 🔹 Filtragem segura
   const filteredAlunos = alunos.filter(
-    (aluno) =>
+    aluno =>
       (aluno.nome || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (aluno.matricula || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
+      (aluno.matricula || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (aluno.email || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // 🔹 Abrir modal
   const openModal = (aluno = null) => {
     if (aluno) {
       setEditingAluno(aluno);
@@ -76,27 +55,16 @@ export default function AlunosScreen() {
     setEditingAluno(null);
   };
 
-  // 🔹 Salvar aluno
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const alunoData = {
-        ...data,
-        telefone: data.telefone.replace(/\D/g, ""),
-      };
+      const alunoData = { ...data, telefone: data.telefone?.replace(/\D/g, "") || "" };
 
       if (editingAluno) {
-        await StorageService.updateItem(
-          StorageService.KEYS.ALUNOS,
-          editingAluno.id,
-          alunoData
-        );
+        await StorageService.updateItem(StorageService.KEYS.ALUNOS, editingAluno.id, alunoData);
         Alert.alert("Sucesso", "Aluno atualizado com sucesso!");
       } else {
-        await StorageService.addItem(StorageService.KEYS.ALUNOS, {
-          ...alunoData,
-          id: Date.now().toString(), // sempre id único
-        });
+        await StorageService.addItem(StorageService.KEYS.ALUNOS, alunoData);
         Alert.alert("Sucesso", "Aluno criado com sucesso!");
       }
 
@@ -109,7 +77,6 @@ export default function AlunosScreen() {
     }
   };
 
-  // 🔹 Excluir aluno
   const deleteAluno = async (id) => {
     Alert.alert("Confirmar", "Deseja excluir este aluno?", [
       { text: "Cancelar", style: "cancel" },
@@ -118,9 +85,13 @@ export default function AlunosScreen() {
         style: "destructive",
         onPress: async () => {
           try {
-            await StorageService.deleteItem(StorageService.KEYS.ALUNOS, id);
-            await loadAlunos();
-            Alert.alert("Sucesso", "Aluno excluído!");
+            const deleted = await StorageService.deleteItem(StorageService.KEYS.ALUNOS, id);
+            if (deleted) {
+              await loadAlunos();
+              Alert.alert("Sucesso", "Aluno excluído!");
+            } else {
+              Alert.alert("Erro", "Aluno não encontrado!");
+            }
           } catch (error) {
             Alert.alert("Erro", "Não foi possível excluir o aluno");
           }
@@ -131,108 +102,52 @@ export default function AlunosScreen() {
 
   return (
     <View style={styles.container}>
-      {/* 🔍 Campo de pesquisa */}
       <TextInput
         label="Pesquisar"
         value={searchQuery}
         onChangeText={setSearchQuery}
         style={styles.searchInput}
+        mode="outlined"
       />
 
-      {/* 📋 Lista de alunos */}
-      <FlatList
-        data={filteredAlunos}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <Card style={styles.card}>
-            <Card.Content>
-              <Title>{item.nome}</Title>
-              <Paragraph>Matrícula: {item.matricula}</Paragraph>
-              <Paragraph>Email: {item.email}</Paragraph>
-              <Paragraph>Telefone: {item.telefone}</Paragraph>
-            </Card.Content>
-            <Card.Actions>
-              <Button onPress={() => openModal(item)}>Editar</Button>
-              <Button onPress={() => deleteAluno(item.id)}>Excluir</Button>
-            </Card.Actions>
-          </Card>
-        )}
-      />
+      {loading ? (
+        <ActivityIndicator animating={true} style={{ marginTop: 20 }} />
+      ) : (
+        <FlatList
+          data={filteredAlunos}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => (
+            <Card style={styles.card}>
+              <Card.Content>
+                <Title>{item.nome}</Title>
+                <Paragraph>Matrícula: {item.matricula}</Paragraph>
+                <Paragraph>Email: {item.email}</Paragraph>
+                <Paragraph>Telefone: {item.telefone}</Paragraph>
+              </Card.Content>
+              <Card.Actions>
+                <Button onPress={() => openModal(item)}>Editar</Button>
+                <Button onPress={() => deleteAluno(item.id)}>Excluir</Button>
+              </Card.Actions>
+            </Card>
+          )}
+          ListEmptyComponent={<Paragraph style={{ textAlign: "center", marginTop: 20 }}>Nenhum aluno encontrado.</Paragraph>}
+          contentContainerStyle={{ paddingBottom: 80 }}
+        />
+      )}
 
-      {/* ➕ Botão flutuante */}
-      <FAB
-        style={styles.fab}
-        icon="plus"
-        onPress={() => openModal()}
-      />
+      <FAB style={styles.fab} icon="plus" onPress={() => openModal()} />
 
-      {/* 📝 Modal de cadastro/edição */}
       <Portal>
-        <Modal
-          visible={visible}
-          onDismiss={closeModal}
-          contentContainerStyle={styles.modal}
-        >
-          <Controller
-            control={control}
-            name="nome"
-            rules={{ required: true }}
-            render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Nome"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="matricula"
-            rules={{ required: true }}
-            render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Matrícula"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="email"
-            rules={{ required: true }}
-            render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Email"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="telefone"
-            render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Telefone"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-                keyboardType="phone-pad"
-              />
-            )}
-          />
+        <Modal visible={visible} onDismiss={closeModal} contentContainerStyle={styles.modal}>
+          <Controller control={control} name="nome" rules={{ required: true }} render={({ field: { onChange, value } }) => <TextInput label="Nome" value={value} onChangeText={onChange} style={styles.input} mode="outlined" />} />
+          <Controller control={control} name="matricula" rules={{ required: true }} render={({ field: { onChange, value } }) => <TextInput label="Matrícula" value={value} onChangeText={onChange} style={styles.input} mode="outlined" />} />
+          <Controller control={control} name="email" rules={{ required: true }} render={({ field: { onChange, value } }) => <TextInput label="Email" value={value} onChangeText={onChange} style={styles.input} mode="outlined" />} />
+          <Controller control={control} name="telefone" render={({ field: { onChange, value } }) => <TextInput label="Telefone" value={value} onChangeText={onChange} style={styles.input} keyboardType="phone-pad" mode="outlined" />} />
 
           {loading ? (
-            <ActivityIndicator animating={true} />
+            <ActivityIndicator animating={true} style={{ marginVertical: 10 }} />
           ) : (
-            <Button mode="contained" onPress={handleSubmit(onSubmit)}>
+            <Button mode="contained" onPress={handleSubmit(onSubmit)} style={{ marginTop: 10 }}>
               {editingAluno ? "Salvar Alterações" : "Cadastrar"}
             </Button>
           )}
@@ -246,7 +161,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 10 },
   searchInput: { marginBottom: 10 },
   card: { marginBottom: 10 },
-  fab: { position: "absolute", right: 16, bottom: 16 },
+  fab: { position: "absolute", right: 16, bottom: 16, zIndex: 10 },
   modal: { backgroundColor: "white", padding: 20, margin: 20, borderRadius: 8 },
   input: { marginBottom: 10 },
 });
