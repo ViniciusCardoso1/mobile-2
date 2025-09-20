@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  Alert,
-  Dimensions,
-} from "react-native";
+import { View, ScrollView, StyleSheet, Alert, Dimensions } from "react-native";
 import {
   Text,
   Card,
@@ -102,7 +96,9 @@ const NotasScreen = () => {
 
   const loadDisciplinas = async () => {
     try {
-      const data = await StorageService.loadData(StorageService.KEYS.DISCIPLINAS);
+      const data = await StorageService.loadData(
+        StorageService.KEYS.DISCIPLINAS
+      );
       setDisciplinas(data || []);
     } catch (error) {
       console.error("Erro ao carregar disciplinas:", error);
@@ -243,7 +239,9 @@ const NotasScreen = () => {
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
       <Searchbar
         placeholder="Buscar notas..."
         onChangeText={setSearchQuery}
@@ -251,7 +249,10 @@ const NotasScreen = () => {
         style={styles.searchbar}
       />
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {filteredNotas.length === 0 ? (
           <Card style={styles.emptyCard}>
             <Card.Content style={styles.emptyContent}>
@@ -259,7 +260,9 @@ const NotasScreen = () => {
                 Nenhuma nota encontrada
               </Text>
               <Text variant="bodyMedium" style={styles.emptySubtitle}>
-                {searchQuery ? "Tente ajustar sua busca" : "Adicione sua primeira nota"}
+                {searchQuery
+                  ? "Tente ajustar sua busca"
+                  : "Adicione sua primeira nota"}
               </Text>
             </Card.Content>
           </Card>
@@ -272,7 +275,10 @@ const NotasScreen = () => {
                     <Text variant="titleMedium" style={styles.alunoTitle}>
                       {getAlunoName(nota.aluno)}
                     </Text>
-                    <Text variant="bodyMedium" style={styles.disciplinaSubtitle}>
+                    <Text
+                      variant="bodyMedium"
+                      style={styles.disciplinaSubtitle}
+                    >
                       {getDisciplinaName(nota.disciplina)}
                     </Text>
                     <View style={styles.chipContainer}>
@@ -280,7 +286,12 @@ const NotasScreen = () => {
                         mode="flat"
                         style={[
                           styles.notaChip,
-                          { backgroundColor: withAlpha(getNotaColor(nota.nota), 0.2) },
+                          {
+                            backgroundColor: withAlpha(
+                              getNotaColor(nota.nota),
+                              0.2
+                            ),
+                          },
                         ]}
                         textStyle={{
                           color: getNotaColor(nota.nota),
@@ -312,7 +323,8 @@ const NotasScreen = () => {
                 {nota.observacoes && (
                   <View style={styles.notaDetails}>
                     <Text variant="bodyMedium" style={styles.detailText}>
-                      <Text style={styles.detailLabel}>Observações:</Text> {nota.observacoes}
+                      <Text style={styles.detailLabel}>Observações:</Text>{" "}
+                      {nota.observacoes}
                     </Text>
                   </View>
                 )}
@@ -327,7 +339,10 @@ const NotasScreen = () => {
         <Modal
           visible={modalVisible}
           onDismiss={closeModal}
-          contentContainerStyle={[styles.modal, { backgroundColor: theme.colors.surface }]}
+          contentContainerStyle={[
+            styles.modal,
+            { backgroundColor: theme.colors.surface },
+          ]}
         >
           <ScrollView>
             <Text variant="titleMedium" style={{ marginBottom: 16 }}>
@@ -357,7 +372,9 @@ const NotasScreen = () => {
               ))}
             </Menu>
             {errors.aluno && (
-              <Text style={{ color: theme.colors.error }}>{errors.aluno.message}</Text>
+              <Text style={{ color: theme.colors.error }}>
+                {errors.aluno.message}
+              </Text>
             )}
 
             {/* Disciplina */}
@@ -370,7 +387,9 @@ const NotasScreen = () => {
                   onPress={() => setDisciplinaMenuVisible(true)}
                   style={{ marginBottom: 8 }}
                 >
-                  {selectedDisciplina ? selectedDisciplina.nome : "Selecione uma disciplina"}
+                  {selectedDisciplina
+                    ? selectedDisciplina.nome
+                    : "Selecione uma disciplina"}
                 </Button>
               }
             >
@@ -383,7 +402,9 @@ const NotasScreen = () => {
               ))}
             </Menu>
             {errors.disciplina && (
-              <Text style={{ color: theme.colors.error }}>{errors.disciplina.message}</Text>
+              <Text style={{ color: theme.colors.error }}>
+                {errors.disciplina.message}
+              </Text>
             )}
 
             {/* Nota */}
@@ -402,7 +423,9 @@ const NotasScreen = () => {
               )}
             />
             {errors.nota && (
-              <Text style={{ color: theme.colors.error }}>{errors.nota.message}</Text>
+              <Text style={{ color: theme.colors.error }}>
+                {errors.nota.message}
+              </Text>
             )}
 
             {/* Data */}
@@ -421,7 +444,9 @@ const NotasScreen = () => {
               )}
             />
             {errors.data && (
-              <Text style={{ color: theme.colors.error }}>{errors.data.message}</Text>
+              <Text style={{ color: theme.colors.error }}>
+                {errors.data.message}
+              </Text>
             )}
 
             {/* Observações */}

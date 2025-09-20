@@ -290,8 +290,6 @@ const DashboardScreen = () => {
         </Card>
       )}
 
-    
-
       {chartData.statusAlunos.length > 0 &&
         chartData.statusAlunos.some((item) => item.population > 0) && (
           <Card style={styles.chartCard}>
@@ -343,7 +341,6 @@ const DashboardScreen = () => {
         </Card>
       )}
 
-      
       <View style={styles.bottomSpacing} />
     </ScrollView>
   );
@@ -356,6 +353,7 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
+    marginBottom: 20,
   },
   headerTitle: {
     color: "white",
