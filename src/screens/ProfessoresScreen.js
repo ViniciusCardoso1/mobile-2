@@ -38,13 +38,10 @@ export default function ProfessoresScreen() {
     setShowAlert(true);
   };
 
-  // Função chamada quando o usuário confirma o alerta
   const handleConfirmAlert = async () => {
     setShowAlert(false);
     if (alertConfirmCallback) {
-      // Chama a callback armazenada
       await alertConfirmCallback();
-      // Limpa a callback para evitar chamadas repetidas
       setAlertConfirmCallback(null);
     }
   };
@@ -53,9 +50,7 @@ export default function ProfessoresScreen() {
     setLoading(true);
     try {
       await StorageService.initializeSampleData();
-      const data = await StorageService.loadData(
-        StorageService.KEYS.PROFESSORES
-      );
+      const data = await StorageService.loadData(StorageService.KEYS.PROFESSORES);
       setProfessores(data || []);
     } catch (error) {
       showCustomAlert("Erro", "Não foi possível carregar os professores");
@@ -71,21 +66,16 @@ export default function ProfessoresScreen() {
 
   const filteredProfessores = professores.filter(
     (professor) =>
-      (professor.nome || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      (professor.email || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      (professor.especialidade || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      (professor.departamento || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase())
+      (professor.nome || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (professor.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (professor.especialidade || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (professor.departamento || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Função de formatação de telefone com proteção
   const formatPhone = (phone) => {
     if (!phone) return "";
+    if (!MaskService || !MaskService.toMask) return phone;
     return MaskService.toMask("phone", phone, {
       maskType: "BRL",
       withDDD: true,
@@ -97,11 +87,8 @@ export default function ProfessoresScreen() {
     if (professor) {
       setEditingProfessor(professor);
       reset({
-        nome: professor.nome,
-        email: professor.email,
+        ...professor,
         telefone: formatPhone(professor.telefone),
-        especialidade: professor.especialidade,
-        departamento: professor.departamento,
       });
     } else {
       setEditingProfessor(null);
@@ -138,10 +125,7 @@ export default function ProfessoresScreen() {
         );
         showCustomAlert("Sucesso", "Professor atualizado com sucesso!");
       } else {
-        await StorageService.addItem(
-          StorageService.KEYS.PROFESSORES,
-          professorData
-        );
+        await StorageService.addItem(StorageService.KEYS.PROFESSORES, professorData);
         showCustomAlert("Sucesso", "Professor criado com sucesso!");
       }
 
@@ -154,23 +138,17 @@ export default function ProfessoresScreen() {
     }
   };
 
-  // Função corrigida para confirmar e deletar professor
   const confirmDeleteProfessor = (id) => {
     setAlertTitle("Confirmar");
     setAlertMessage("Deseja excluir este professor?");
     setAlertConfirmCallback(() => async () => {
-      setShowAlert(false); // fecha o alerta de confirmação
-
+      setShowAlert(false);
       setLoading(true);
       try {
-        const deleted = await StorageService.deleteItem(
-          StorageService.KEYS.PROFESSORES,
-          id
-        );
+        const deleted = await StorageService.deleteItem(StorageService.KEYS.PROFESSORES, id);
         await loadProfessores();
 
         if (deleted) {
-          // Aguarda um pouquinho para evitar sobreposição
           setTimeout(() => {
             showCustomAlert("Sucesso", "Professor excluído!");
           }, 300);
@@ -213,9 +191,7 @@ export default function ProfessoresScreen() {
               </Card.Content>
               <Card.Actions>
                 <Button onPress={() => openModal(item)}>Editar</Button>
-                <Button onPress={() => confirmDeleteProfessor(item.id)}>
-                  Excluir
-                </Button>
+                <Button onPress={() => confirmDeleteProfessor(item.id)}>Excluir</Button>
               </Card.Actions>
             </Card>
           )}
@@ -231,11 +207,7 @@ export default function ProfessoresScreen() {
       <FAB style={styles.fab} icon="plus" onPress={() => openModal()} />
 
       <Portal>
-        <Modal
-          visible={visible}
-          onDismiss={closeModal}
-          contentContainerStyle={styles.modal}
-        >
+        <Modal visible={visible} onDismiss={closeModal} contentContainerStyle={styles.modal}>
           <Controller
             control={control}
             name="nome"
@@ -274,12 +246,16 @@ export default function ProfessoresScreen() {
                 label="Telefone"
                 value={value}
                 onChangeText={(text) => {
-                  const masked = MaskService.toMask("phone", text, {
-                    maskType: "BRL",
-                    withDDD: true,
-                    dddMask: "(99) 99999-9999",
-                  });
-                  onChange(masked);
+                  if (MaskService && MaskService.toMask) {
+                    const masked = MaskService.toMask("phone", text, {
+                      maskType: "BRL",
+                      withDDD: true,
+                      dddMask: "(99) 99999-9999",
+                    });
+                    onChange(masked);
+                  } else {
+                    onChange(text);
+                  }
                 }}
                 style={styles.input}
                 keyboardType="phone-pad"
@@ -317,22 +293,14 @@ export default function ProfessoresScreen() {
           />
 
           {loading ? (
-            <ActivityIndicator
-              animating={true}
-              style={{ marginVertical: 10 }}
-            />
+            <ActivityIndicator animating={true} style={{ marginVertical: 10 }} />
           ) : (
-            <Button
-              mode="contained"
-              onPress={handleSubmit(onSubmit)}
-              style={{ marginTop: 10 }}
-            >
+            <Button mode="contained" onPress={handleSubmit(onSubmit)} style={{ marginTop: 10 }}>
               {editingProfessor ? "Salvar Alterações" : "Cadastrar"}
             </Button>
           )}
         </Modal>
 
-        {/* Alert Modal */}
         <AwesomeAlert
           show={showAlert}
           showProgress={false}
@@ -354,17 +322,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 10 },
   searchInput: { marginBottom: 10 },
   card: { marginBottom: 10 },
-  fab: {
-    position: "absolute",
-    right: 16,
-    bottom: 16,
-    zIndex: 10,
-  },
-  modal: {
-    backgroundColor: "white",
-    padding: 20,
-    margin: 20,
-    borderRadius: 8,
-  },
+  fab: { position: "absolute", right: 16, bottom: 16, zIndex: 10 },
+  modal: { backgroundColor: "white", padding: 20, margin: 20, borderRadius: 8 },
   input: { marginBottom: 10 },
 });
