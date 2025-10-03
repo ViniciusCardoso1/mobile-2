@@ -1,64 +1,43 @@
 import React, { useState, useEffect } from "react";
-import { View, ScrollView, StyleSheet, Alert, Dimensions } from "react-native";
+import { View, StyleSheet, FlatList } from "react-native";
 import {
-  Text,
   Card,
+  Text,
   Button,
   FAB,
   Portal,
   Modal,
   TextInput,
+  ActivityIndicator,
   Chip,
-  IconButton,
-  Searchbar,
-  useTheme,
   Menu,
+  useTheme,
 } from "react-native-paper";
 import { useForm, Controller } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
 import StorageService from "../services/StorageService";
-
-// Schema de validação
-const notaSchema = yup.object().shape({
-  aluno: yup.string().required("Aluno é obrigatório"),
-  disciplina: yup.string().required("Disciplina é obrigatória"),
-  nota: yup
-    .number()
-    .required("Nota é obrigatória")
-    .min(0, "Nota deve ser maior ou igual a 0")
-    .max(10, "Nota deve ser menor ou igual a 10"),
-  data: yup.string().required("Data é obrigatória"),
-  observacoes: yup.string(),
-});
-
-// Função para aplicar alpha em cores rgba
-const withAlpha = (rgba, alpha) => {
-  return rgba.replace(/[\d\.]+\)$/, alpha + ")");
-};
+import AwesomeAlert from "react-native-awesome-alerts";
 
 const NotasScreen = () => {
   const theme = useTheme();
+
   const [notas, setNotas] = useState([]);
   const [alunos, setAlunos] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingNota, setEditingNota] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingNota, setEditingNota] = useState(null);
+
+  // Estados para controlar menus dropdown
   const [alunoMenuVisible, setAlunoMenuVisible] = useState(false);
   const [disciplinaMenuVisible, setDisciplinaMenuVisible] = useState(false);
-  const [selectedAluno, setSelectedAluno] = useState(null);
-  const [selectedDisciplina, setSelectedDisciplina] = useState(null);
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-    setValue,
-    formState: { errors },
-  } = useForm({
-    resolver: yupResolver(notaSchema),
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertConfirmCallback, setAlertConfirmCallback] = useState(null);
+
+  const { control, handleSubmit, reset, setValue, watch } = useForm({
     defaultValues: {
       aluno: "",
       disciplina: "",
@@ -68,101 +47,55 @@ const NotasScreen = () => {
     },
   });
 
+  // Para mostrar o nome selecionado no botão
+  const selectedAlunoId = watch("aluno");
+  const selectedDisciplinaId = watch("disciplina");
+
+  // Função para mostrar alertas genéricos
+  const showCustomAlert = (title, message, onConfirm = null) => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertConfirmCallback(() => onConfirm);
+    setShowAlert(true);
+  };
+
+  // Função chamada quando o usuário confirma o alerta
+  const handleConfirmAlert = async () => {
+    setShowAlert(false);
+    if (alertConfirmCallback) {
+      await alertConfirmCallback();
+      setAlertConfirmCallback(null);
+    }
+  };
+
   useEffect(() => {
-    loadNotas();
-    loadAlunos();
-    loadDisciplinas();
+    loadData();
   }, []);
 
-  const loadNotas = async () => {
-    try {
-      const data = await StorageService.loadData(StorageService.KEYS.NOTAS);
-      setNotas(data || []);
-    } catch {
-      Alert.alert("Erro", "Não foi possível carregar as notas");
-      setNotas([]);
-    }
-  };
-
-  const loadAlunos = async () => {
-    try {
-      const data = await StorageService.loadData(StorageService.KEYS.ALUNOS);
-      setAlunos(data || []);
-    } catch (error) {
-      console.error("Erro ao carregar alunos:", error);
-      setAlunos([]);
-    }
-  };
-
-  const loadDisciplinas = async () => {
-    try {
-      const data = await StorageService.loadData(
-        StorageService.KEYS.DISCIPLINAS
-      );
-      setDisciplinas(data || []);
-    } catch (error) {
-      console.error("Erro ao carregar disciplinas:", error);
-      setDisciplinas([]);
-    }
-  };
-
-  const onSubmit = async (data) => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const notaData = { ...data, nota: parseFloat(data.nota) };
-
-      if (editingNota) {
-        await StorageService.updateItem(
-          StorageService.KEYS.NOTAS,
-          editingNota.id,
-          notaData
-        );
-        Alert.alert("Sucesso", "Nota atualizada com sucesso!");
-      } else {
-        await StorageService.addItem(StorageService.KEYS.NOTAS, {
-          ...notaData,
-          id: Date.now().toString(),
-        });
-        Alert.alert("Sucesso", "Nota criada com sucesso!");
-      }
-
-      await loadNotas();
-      closeModal();
-    } catch {
-      Alert.alert("Erro", "Não foi possível salvar a nota");
+      const [notasData, alunosData, disciplinasData] = await Promise.all([
+        StorageService.loadData(StorageService.KEYS.NOTAS),
+        StorageService.loadData(StorageService.KEYS.ALUNOS),
+        StorageService.loadData(StorageService.KEYS.DISCIPLINAS),
+      ]);
+      setNotas(notasData || []);
+      setAlunos(alunosData || []);
+      setDisciplinas(disciplinasData || []);
+    } catch (error) {
+      showCustomAlert("Erro", "Não foi possível carregar os dados");
+      setNotas([]);
+      setAlunos([]);
+      setDisciplinas([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const deleteNota = async (id) => {
-    Alert.alert("Confirmar Exclusão", "Deseja excluir esta nota?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Excluir",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await StorageService.deleteItem(StorageService.KEYS.NOTAS, id);
-            await loadNotas();
-            Alert.alert("Sucesso", "Nota excluída com sucesso!");
-          } catch {
-            Alert.alert("Erro", "Não foi possível excluir a nota");
-          }
-        },
-      },
-    ]);
-  };
-
   const openModal = (nota = null) => {
-    setEditingNota(nota);
     if (nota) {
-      const aluno = alunos.find((a) => a.id === nota.aluno);
-      const disciplina = disciplinas.find((d) => d.id === nota.disciplina);
-
-      setSelectedAluno(aluno || null);
-      setSelectedDisciplina(disciplina || null);
-
+      setEditingNota(nota);
       reset({
         aluno: nota.aluno,
         disciplina: nota.disciplina,
@@ -171,8 +104,7 @@ const NotasScreen = () => {
         observacoes: nota.observacoes || "",
       });
     } else {
-      setSelectedAluno(null);
-      setSelectedDisciplina(null);
+      setEditingNota(null);
       reset({
         aluno: "",
         disciplina: "",
@@ -186,38 +118,84 @@ const NotasScreen = () => {
 
   const closeModal = () => {
     setModalVisible(false);
-    setEditingNota(null);
-    setSelectedAluno(null);
-    setSelectedDisciplina(null);
     reset();
-  };
-
-  const selectAluno = (aluno) => {
-    setSelectedAluno(aluno);
-    setValue("aluno", aluno.id);
+    setEditingNota(null);
     setAlunoMenuVisible(false);
+    setDisciplinaMenuVisible(false);
   };
 
-  const selectDisciplina = (disciplina) => {
-    setSelectedDisciplina(disciplina);
-    setValue("disciplina", disciplina.id);
-    setDisciplinaMenuVisible(false);
+  const onSubmit = async (data) => {
+    setLoading(true);
+    try {
+      const notaData = { ...data, nota: parseFloat(data.nota) };
+
+      if (editingNota) {
+        await StorageService.updateItem(
+          StorageService.KEYS.NOTAS,
+          editingNota.id,
+          notaData
+        );
+        showCustomAlert("Sucesso", "Nota atualizada com sucesso!");
+      } else {
+        await StorageService.addItem(StorageService.KEYS.NOTAS, {
+          ...notaData,
+          id: Date.now().toString(),
+        });
+        showCustomAlert("Sucesso", "Nota criada com sucesso!");
+      }
+
+      await loadData();
+      closeModal();
+    } catch {
+      showCustomAlert("Erro", "Não foi possível salvar a nota");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função para confirmar exclusão com alerta encadeado
+  const confirmDeleteNota = (id) => {
+    setAlertTitle("Confirmar");
+    setAlertMessage("A nota será excluída.");
+    setAlertConfirmCallback(() => async () => {
+      setShowAlert(false); // fecha o alerta de confirmação
+
+      setLoading(true);
+      try {
+        await StorageService.deleteItem(StorageService.KEYS.NOTAS, id);
+        await loadData();
+
+        // Após exclusão, mostra alerta de sucesso
+        setAlertTitle("Sucesso");
+        setAlertMessage("Nota excluída com sucesso!");
+        setAlertConfirmCallback(null);
+        setShowAlert(true);
+      } catch {
+        setAlertTitle("Erro");
+        setAlertMessage("Não foi possível excluir a nota");
+        setAlertConfirmCallback(null);
+        setShowAlert(true);
+      } finally {
+        setLoading(false);
+      }
+    });
+    setShowAlert(true);
   };
 
   const getAlunoName = (alunoId) => {
     const aluno = alunos.find((a) => a.id === alunoId);
-    return aluno ? aluno.nome : "Aluno não encontrado";
+    return aluno ? aluno.nome : "Selecione um aluno";
   };
 
   const getDisciplinaName = (disciplinaId) => {
     const disciplina = disciplinas.find((d) => d.id === disciplinaId);
-    return disciplina ? disciplina.nome : "Disciplina não encontrada";
+    return disciplina ? disciplina.nome : "Selecione uma disciplina";
   };
 
   const getNotaColor = (nota) => {
-    if (nota >= 7) return theme.colors.primary;
-    if (nota >= 5) return "#f59e0b";
-    return theme.colors.error;
+    if (nota >= 7) return "#4caf50"; // verde
+    if (nota >= 5) return "#ff9800"; // laranja
+    return "#f44336"; // vermelho
   };
 
   const formatDate = (dateString) => {
@@ -239,285 +217,242 @@ const NotasScreen = () => {
   });
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-      <Searchbar
-        placeholder="Buscar notas..."
-        onChangeText={setSearchQuery}
+    <View style={styles.container}>
+      <TextInput
+        label="Pesquisar"
         value={searchQuery}
-        style={styles.searchbar}
+        onChangeText={setSearchQuery}
+        style={styles.searchInput}
+        mode="outlined"
       />
 
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
-        {filteredNotas.length === 0 ? (
-          <Card style={styles.emptyCard}>
-            <Card.Content style={styles.emptyContent}>
-              <Text variant="titleMedium" style={styles.emptyTitle}>
-                Nenhuma nota encontrada
-              </Text>
-              <Text variant="bodyMedium" style={styles.emptySubtitle}>
-                {searchQuery
-                  ? "Tente ajustar sua busca"
-                  : "Adicione sua primeira nota"}
-              </Text>
-            </Card.Content>
-          </Card>
-        ) : (
-          filteredNotas.map((nota) => (
-            <Card key={nota.id} style={styles.notaCard}>
+      {loading ? (
+        <ActivityIndicator animating={true} style={{ marginTop: 20 }} />
+      ) : (
+        <FlatList
+          data={filteredNotas}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => (
+            <Card style={styles.card}>
               <Card.Content>
-                <View style={styles.cardHeader}>
-                  <View style={styles.cardTitleContainer}>
-                    <Text variant="titleMedium" style={styles.alunoTitle}>
-                      {getAlunoName(nota.aluno)}
-                    </Text>
-                    <Text
-                      variant="bodyMedium"
-                      style={styles.disciplinaSubtitle}
-                    >
-                      {getDisciplinaName(nota.disciplina)}
-                    </Text>
-                    <View style={styles.chipContainer}>
-                      <Chip
-                        mode="flat"
-                        style={[
-                          styles.notaChip,
-                          {
-                            backgroundColor: withAlpha(
-                              getNotaColor(nota.nota),
-                              0.2
-                            ),
-                          },
-                        ]}
-                        textStyle={{
-                          color: getNotaColor(nota.nota),
-                          fontWeight: "600",
-                        }}
-                      >
-                        {nota.nota?.toFixed(1)}
-                      </Chip>
-                      <Chip mode="outlined" style={styles.dataChip}>
-                        {formatDate(nota.data)}
-                      </Chip>
-                    </View>
-                  </View>
-                  <View style={styles.cardActions}>
-                    <IconButton
-                      icon="pencil"
-                      size={20}
-                      onPress={() => openModal(nota)}
-                    />
-                    <IconButton
-                      icon="delete"
-                      size={20}
-                      iconColor={theme.colors.error}
-                      onPress={() => deleteNota(nota.id)}
-                    />
-                  </View>
+                <Text style={styles.title}>{getAlunoName(item.aluno)}</Text>
+                <Text style={styles.subtitle}>
+                  {getDisciplinaName(item.disciplina)}
+                </Text>
+                <View style={styles.chipRow}>
+                  <Chip
+                    style={[
+                      styles.notaChip,
+                      { backgroundColor: getNotaColor(item.nota) + "33" },
+                    ]} // 20% opacity
+                    textStyle={{
+                      color: getNotaColor(item.nota),
+                      fontWeight: "600",
+                    }}
+                  >
+                    {item.nota?.toFixed(1)}
+                  </Chip>
+                  <Chip style={styles.dataChip}>{formatDate(item.data)}</Chip>
                 </View>
-
-                {nota.observacoes && (
-                  <View style={styles.notaDetails}>
-                    <Text variant="bodyMedium" style={styles.detailText}>
-                      <Text style={styles.detailLabel}>Observações:</Text>{" "}
-                      {nota.observacoes}
-                    </Text>
-                  </View>
-                )}
+                {item.observacoes ? (
+                  <Text style={styles.observacoes}>
+                    <Text style={{ fontWeight: "600" }}>Observações: </Text>
+                    {item.observacoes}
+                  </Text>
+                ) : null}
               </Card.Content>
+              <Card.Actions>
+                <Button onPress={() => openModal(item)}>Editar</Button>
+                <Button onPress={() => confirmDeleteNota(item.id)}>
+                  Excluir
+                </Button>
+              </Card.Actions>
             </Card>
-          ))
-        )}
-      </ScrollView>
+          )}
+          ListEmptyComponent={
+            <Text style={{ textAlign: "center", marginTop: 20 }}>
+              Nenhuma nota encontrada.
+            </Text>
+          }
+          contentContainerStyle={{ paddingBottom: 80 }}
+        />
+      )}
 
-      {/* Modal para adicionar/editar nota */}
+      <FAB style={styles.fab} icon="plus" onPress={() => openModal()} />
+
       <Portal>
         <Modal
           visible={modalVisible}
           onDismiss={closeModal}
-          contentContainerStyle={[
-            styles.modal,
-            { backgroundColor: theme.colors.surface },
-          ]}
+          contentContainerStyle={styles.modal}
         >
-          <ScrollView>
-            <Text variant="titleMedium" style={{ marginBottom: 16 }}>
-              {editingNota ? "Editar Nota" : "Nova Nota"}
-            </Text>
-
-            {/* Aluno */}
-            <Menu
-              visible={alunoMenuVisible}
-              onDismiss={() => setAlunoMenuVisible(false)}
-              anchor={
-                <Button
-                  mode="outlined"
-                  onPress={() => setAlunoMenuVisible(true)}
-                  style={{ marginBottom: 8 }}
-                >
-                  {selectedAluno ? selectedAluno.nome : "Selecione um aluno"}
-                </Button>
-              }
-            >
-              {alunos.map((aluno) => (
+          {/* Menu para selecionar aluno */}
+          <Menu
+            visible={alunoMenuVisible}
+            onDismiss={() => setAlunoMenuVisible(false)}
+            anchor={
+              <Button
+                mode="outlined"
+                onPress={() => setAlunoMenuVisible(true)}
+                style={styles.input}
+                contentStyle={{ justifyContent: "space-between" }}
+              >
+                {getAlunoName(selectedAlunoId)}
+              </Button>
+            }
+          >
+            {alunos.length === 0 ? (
+              <Menu.Item title="Nenhum aluno cadastrado" disabled />
+            ) : (
+              alunos.map((aluno) => (
                 <Menu.Item
                   key={aluno.id}
-                  onPress={() => selectAluno(aluno)}
+                  onPress={() => {
+                    setValue("aluno", aluno.id);
+                    setAlunoMenuVisible(false);
+                  }}
                   title={aluno.nome}
                 />
-              ))}
-            </Menu>
-            {errors.aluno && (
-              <Text style={{ color: theme.colors.error }}>
-                {errors.aluno.message}
-              </Text>
+              ))
             )}
+          </Menu>
 
-            {/* Disciplina */}
-            <Menu
-              visible={disciplinaMenuVisible}
-              onDismiss={() => setDisciplinaMenuVisible(false)}
-              anchor={
-                <Button
-                  mode="outlined"
-                  onPress={() => setDisciplinaMenuVisible(true)}
-                  style={{ marginBottom: 8 }}
-                >
-                  {selectedDisciplina
-                    ? selectedDisciplina.nome
-                    : "Selecione uma disciplina"}
-                </Button>
-              }
-            >
-              {disciplinas.map((disciplina) => (
+          {/* Menu para selecionar disciplina */}
+          <Menu
+            visible={disciplinaMenuVisible}
+            onDismiss={() => setDisciplinaMenuVisible(false)}
+            anchor={
+              <Button
+                mode="outlined"
+                onPress={() => setDisciplinaMenuVisible(true)}
+                style={styles.input}
+                contentStyle={{ justifyContent: "space-between" }}
+              >
+                {getDisciplinaName(selectedDisciplinaId)}
+              </Button>
+            }
+          >
+            {disciplinas.length === 0 ? (
+              <Menu.Item title="Nenhuma disciplina cadastrada" disabled />
+            ) : (
+              disciplinas.map((disciplina) => (
                 <Menu.Item
                   key={disciplina.id}
-                  onPress={() => selectDisciplina(disciplina)}
+                  onPress={() => {
+                    setValue("disciplina", disciplina.id);
+                    setDisciplinaMenuVisible(false);
+                  }}
                   title={disciplina.nome}
                 />
-              ))}
-            </Menu>
-            {errors.disciplina && (
-              <Text style={{ color: theme.colors.error }}>
-                {errors.disciplina.message}
-              </Text>
+              ))
             )}
+          </Menu>
 
-            {/* Nota */}
-            <Controller
-              control={control}
-              name="nota"
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  label="Nota"
-                  keyboardType="numeric"
-                  value={value}
-                  onChangeText={onChange}
-                  style={{ marginBottom: 8 }}
-                  error={!!errors.nota}
-                />
-              )}
-            />
-            {errors.nota && (
-              <Text style={{ color: theme.colors.error }}>
-                {errors.nota.message}
-              </Text>
+          {/* Nota */}
+          <Controller
+            control={control}
+            name="nota"
+            render={({ field: { onChange, value } }) => (
+              <TextInput
+                label="Nota"
+                keyboardType="numeric"
+                value={value}
+                onChangeText={onChange}
+                style={styles.input}
+                mode="outlined"
+              />
             )}
+          />
 
-            {/* Data */}
-            <Controller
-              control={control}
-              name="data"
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  label="Data"
-                  placeholder="AAAA-MM-DD"
-                  value={value}
-                  onChangeText={onChange}
-                  style={{ marginBottom: 8 }}
-                  error={!!errors.data}
-                />
-              )}
-            />
-            {errors.data && (
-              <Text style={{ color: theme.colors.error }}>
-                {errors.data.message}
-              </Text>
+          {/* Data */}
+          <Controller
+            control={control}
+            name="data"
+            render={({ field: { onChange, value } }) => (
+              <TextInput
+                label="Data"
+                placeholder="AAAA-MM-DD"
+                value={value}
+                onChangeText={onChange}
+                style={styles.input}
+                mode="outlined"
+              />
             )}
+          />
 
-            {/* Observações */}
-            <Controller
-              control={control}
-              name="observacoes"
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  label="Observações"
-                  value={value}
-                  onChangeText={onChange}
-                  multiline
-                  numberOfLines={3}
-                  style={{ marginBottom: 16 }}
-                />
-              )}
+          {/* Observações */}
+          <Controller
+            control={control}
+            name="observacoes"
+            render={({ field: { onChange, value } }) => (
+              <TextInput
+                label="Observações"
+                value={value}
+                onChangeText={onChange}
+                multiline
+                numberOfLines={3}
+                style={styles.input}
+                mode="outlined"
+              />
+            )}
+          />
+
+          {loading ? (
+            <ActivityIndicator
+              animating={true}
+              style={{ marginVertical: 10 }}
             />
-
+          ) : (
             <Button
               mode="contained"
               onPress={handleSubmit(onSubmit)}
-              loading={loading}
-              disabled={loading}
+              style={{ marginTop: 10 }}
             >
               {editingNota ? "Salvar Alterações" : "Adicionar Nota"}
             </Button>
-          </ScrollView>
+          )}
         </Modal>
-      </Portal>
 
-      <FAB
-        icon="plus"
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        onPress={() => openModal()}
-      />
+        <AwesomeAlert
+          show={showAlert}
+          showProgress={false}
+          title={alertTitle}
+          message={alertMessage}
+          closeOnTouchOutside={false}
+          closeOnHardwareBackPress={false}
+          showConfirmButton={true}
+          confirmText="OK"
+          confirmButtonColor={theme.colors.primary}
+          onConfirmPressed={handleConfirmAlert}
+        />
+      </Portal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  searchbar: { marginBottom: 16, elevation: 2 },
-  scrollView: { flex: 1 },
-  notaCard: { marginBottom: 12, elevation: 2 },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
+  container: { flex: 1, padding: 10 },
+  searchInput: { marginBottom: 10 },
+  card: { marginBottom: 10 },
+  title: { fontWeight: "600", fontSize: 16, marginBottom: 2 },
+  subtitle: { opacity: 0.7, marginBottom: 8 },
+  chipRow: { flexDirection: "row", marginBottom: 4, flexWrap: "wrap" },
+  notaChip: { marginRight: 8, marginBottom: 4 },
+  dataChip: { marginRight: 8, marginBottom: 4 },
+  observacoes: { lineHeight: 20 },
+  fab: {
+    position: "absolute",
+    right: 16,
+    bottom: 16,
+    zIndex: 10,
   },
-  cardTitleContainer: { flex: 1, marginRight: 8 },
-  alunoTitle: { fontWeight: "600", marginBottom: 2 },
-  disciplinaSubtitle: { opacity: 0.7, marginBottom: 8 },
-  chipContainer: { flexDirection: "row", marginBottom: 4, flexWrap: "wrap" },
-  notaChip: { alignSelf: "flex-start", marginRight: 4, marginBottom: 4 },
-  dataChip: { alignSelf: "flex-start", marginRight: 4, marginBottom: 4 },
-  cardActions: { flexDirection: "row" },
-  notaDetails: { marginTop: 8 },
-  detailText: { lineHeight: 20 },
-  detailLabel: { fontWeight: "500" },
-  emptyCard: { marginTop: 40, elevation: 1 },
-  emptyContent: { alignItems: "center", paddingVertical: 32 },
-  emptyTitle: { fontWeight: "600", marginBottom: 8 },
-  emptySubtitle: { opacity: 0.7 },
   modal: {
-    margin: 20,
+    backgroundColor: "white",
     padding: 20,
-    borderRadius: 12,
-    maxHeight: Dimensions.get("window").height * 0.8,
+    margin: 20,
+    borderRadius: 8,
   },
-  fab: { position: "absolute", margin: 16, right: 0, bottom: 0 },
+  input: { marginBottom: 10 },
 });
 
 export default NotasScreen;

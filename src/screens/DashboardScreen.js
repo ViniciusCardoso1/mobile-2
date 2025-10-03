@@ -217,21 +217,19 @@ const DashboardScreen = () => {
           <StatCard
             title="Turmas"
             value={stats.totalTurmas}
-            icon="class"
+            icon="school" // ou "account-group"
             color={theme.colors.primary}
           />
           <StatCard
             title="Alunos"
             value={stats.totalAlunos}
-            icon="people"
+            icon="account-multiple"
             color="#22c55e"
           />
-        </View>
-        <View style={styles.statsRow}>
           <StatCard
             title="Professores"
             value={stats.totalProfessores}
-            icon="person"
+            icon="account-tie"
             color="#f59e0b"
           />
           <StatCard
@@ -240,13 +238,11 @@ const DashboardScreen = () => {
             icon="book"
             color="#8b5cf6"
           />
-        </View>
-        <View style={styles.statsRow}>
           <StatCard
             title="Média Geral"
             value={stats.mediaGeral.toFixed(1)}
             subtitle={`${stats.totalNotas} notas`}
-            icon="grade"
+            icon="star"
             color="#06b6d4"
           />
           <StatCard

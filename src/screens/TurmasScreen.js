@@ -10,12 +10,16 @@ import {
   TextInput,
   Button,
   ActivityIndicator,
+  Menu,
+  useTheme,
 } from "react-native-paper";
 import { useForm, Controller } from "react-hook-form";
 import StorageService from "../services/StorageService";
 import AwesomeAlert from "react-native-awesome-alerts";
 
 export default function TurmasScreen() {
+  const theme = useTheme();
+
   const [turmas, setTurmas] = useState([]);
   const [professores, setProfessores] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -23,12 +27,14 @@ export default function TurmasScreen() {
   const [visible, setVisible] = useState(false);
   const [editingTurma, setEditingTurma] = useState(null);
 
+  const [professorMenuVisible, setProfessorMenuVisible] = useState(false);
+
   const [showAlert, setShowAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
   const [alertConfirmCallback, setAlertConfirmCallback] = useState(null);
 
-  const { control, handleSubmit, reset } = useForm();
+  const { control, handleSubmit, reset, setValue, watch } = useForm();
 
   // Função para mostrar alertas genéricos
   const showCustomAlert = (title, message, onConfirm = null) => {
@@ -42,9 +48,7 @@ export default function TurmasScreen() {
   const handleConfirmAlert = async () => {
     setShowAlert(false);
     if (alertConfirmCallback) {
-      // Chama a callback armazenada
       await alertConfirmCallback();
-      // Limpa a callback para evitar chamadas repetidas
       setAlertConfirmCallback(null);
     }
   };
@@ -85,7 +89,9 @@ export default function TurmasScreen() {
       (turma.nome || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (turma.codigo || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (turma.periodo || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (turma.professor || "").toLowerCase().includes(searchQuery.toLowerCase())
+      getProfessorName(turma.professor)
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase())
   );
 
   const openModal = (turma = null) => {
@@ -115,6 +121,7 @@ export default function TurmasScreen() {
     setVisible(false);
     reset();
     setEditingTurma(null);
+    setProfessorMenuVisible(false);
   };
 
   const onSubmit = async (data) => {
@@ -180,8 +187,10 @@ export default function TurmasScreen() {
 
   const getProfessorName = (professorId) => {
     const professor = professores.find((p) => p.id === professorId);
-    return professor ? professor.nome : professorId;
+    return professor ? professor.nome : "Selecione um professor";
   };
+
+  const selectedProfessorId = watch("professor");
 
   return (
     <View style={styles.container}>
@@ -277,20 +286,38 @@ export default function TurmasScreen() {
               />
             )}
           />
-          <Controller
-            control={control}
-            name="professor"
-            rules={{ required: true }}
-            render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Professor"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
+
+          {/* Campo Professor com Menu */}
+          <Menu
+            visible={professorMenuVisible}
+            onDismiss={() => setProfessorMenuVisible(false)}
+            anchor={
+              <Button
                 mode="outlined"
-              />
+                onPress={() => setProfessorMenuVisible(true)}
+                style={styles.input}
+                contentStyle={{ justifyContent: "space-between" }}
+              >
+                {getProfessorName(selectedProfessorId)}
+              </Button>
+            }
+          >
+            {professores.length === 0 ? (
+              <Menu.Item title="Nenhum professor cadastrado" disabled />
+            ) : (
+              professores.map((professor) => (
+                <Menu.Item
+                  key={professor.id}
+                  onPress={() => {
+                    setValue("professor", professor.id);
+                    setProfessorMenuVisible(false);
+                  }}
+                  title={professor.nome}
+                />
+              ))
             )}
-          />
+          </Menu>
+
           <Controller
             control={control}
             name="capacidade"
@@ -323,7 +350,6 @@ export default function TurmasScreen() {
           )}
         </Modal>
 
-        {/* Alert Modal */}
         <AwesomeAlert
           show={showAlert}
           showProgress={false}
@@ -333,7 +359,7 @@ export default function TurmasScreen() {
           closeOnHardwareBackPress={false}
           showConfirmButton={true}
           confirmText="OK"
-          confirmButtonColor="#3089ff"
+          confirmButtonColor={theme.colors.primary}
           onConfirmPressed={handleConfirmAlert}
         />
       </Portal>

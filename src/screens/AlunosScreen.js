@@ -10,24 +10,43 @@ import {
   TextInput,
   Button,
   ActivityIndicator,
+  Menu,
+  useTheme,
 } from "react-native-paper";
 import { useForm, Controller } from "react-hook-form";
 import StorageService from "../services/StorageService";
 import AwesomeAlert from "react-native-awesome-alerts";
 
 export default function AlunosScreen() {
+  const theme = useTheme();
+
   const [alunos, setAlunos] = useState([]);
+  const [turmas, setTurmas] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
   const [editingAluno, setEditingAluno] = useState(null);
+
+  // Estado para controlar menu dropdown de turmas
+  const [turmaMenuVisible, setTurmaMenuVisible] = useState(false);
 
   const [showAlert, setShowAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
   const [alertConfirmCallback, setAlertConfirmCallback] = useState(null);
 
-  const { control, handleSubmit, reset } = useForm();
+  const { control, handleSubmit, reset, setValue, watch } = useForm({
+    defaultValues: {
+      nome: "",
+      matricula: "",
+      email: "",
+      telefone: "",
+      turma: "",
+    },
+  });
+
+  // Para mostrar o nome da turma selecionada no botão
+  const selectedTurmaId = watch("turma");
 
   // Função para mostrar alertas genéricos
   const showCustomAlert = (title, message, onConfirm = null) => {
@@ -41,9 +60,7 @@ export default function AlunosScreen() {
   const handleConfirmAlert = async () => {
     setShowAlert(false);
     if (alertConfirmCallback) {
-      // Chama a callback armazenada
       await alertConfirmCallback();
-      // Limpa a callback para evitar chamadas repetidas
       setAlertConfirmCallback(null);
     }
   };
@@ -52,11 +69,16 @@ export default function AlunosScreen() {
     setLoading(true);
     try {
       await StorageService.initializeSampleData();
-      const data = await StorageService.loadData(StorageService.KEYS.ALUNOS);
-      setAlunos(data || []);
+      const [alunosData, turmasData] = await Promise.all([
+        StorageService.loadData(StorageService.KEYS.ALUNOS),
+        StorageService.loadData(StorageService.KEYS.TURMAS),
+      ]);
+      setAlunos(alunosData || []);
+      setTurmas(turmasData || []);
     } catch (error) {
-      showCustomAlert("Erro", "Não foi possível carregar os alunos");
+      showCustomAlert("Erro", "Não foi possível carregar os alunos ou turmas");
       setAlunos([]);
+      setTurmas([]);
     } finally {
       setLoading(false);
     }
@@ -72,16 +94,25 @@ export default function AlunosScreen() {
       (aluno.matricula || "")
         .toLowerCase()
         .includes(searchQuery.toLowerCase()) ||
-      (aluno.email || "").toLowerCase().includes(searchQuery.toLowerCase())
+      (aluno.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (getTurmaName(aluno.turma) || "")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase())
   );
 
   const openModal = (aluno = null) => {
     if (aluno) {
       setEditingAluno(aluno);
-      reset(aluno);
+      reset({
+        nome: aluno.nome || "",
+        matricula: aluno.matricula || "",
+        email: aluno.email || "",
+        telefone: aluno.telefone || "",
+        turma: aluno.turma || "",
+      });
     } else {
       setEditingAluno(null);
-      reset({ nome: "", matricula: "", email: "", telefone: "" });
+      reset({ nome: "", matricula: "", email: "", telefone: "", turma: "" });
     }
     setVisible(true);
   };
@@ -90,6 +121,7 @@ export default function AlunosScreen() {
     setVisible(false);
     reset();
     setEditingAluno(null);
+    setTurmaMenuVisible(false);
   };
 
   const onSubmit = async (data) => {
@@ -108,7 +140,9 @@ export default function AlunosScreen() {
         );
         showCustomAlert("Sucesso", "Aluno atualizado com sucesso!");
       } else {
-        await StorageService.addItem(StorageService.KEYS.ALUNOS, alunoData);
+        // Gera um id único se não existir
+        const newAluno = { ...alunoData, id: Date.now().toString() };
+        await StorageService.addItem(StorageService.KEYS.ALUNOS, newAluno);
         showCustomAlert("Sucesso", "Aluno criado com sucesso!");
       }
 
@@ -153,6 +187,11 @@ export default function AlunosScreen() {
     setShowAlert(true);
   };
 
+  const getTurmaName = (turmaId) => {
+    const turma = turmas.find((t) => t.id === turmaId);
+    return turma ? turma.nome : "Selecione uma turma";
+  };
+
   return (
     <View style={styles.container}>
       <TextInput
@@ -176,6 +215,7 @@ export default function AlunosScreen() {
                 <Paragraph>Matrícula: {item.matricula}</Paragraph>
                 <Paragraph>Email: {item.email}</Paragraph>
                 <Paragraph>Telefone: {item.telefone}</Paragraph>
+                <Paragraph>Turma: {getTurmaName(item.turma)}</Paragraph>
               </Card.Content>
               <Card.Actions>
                 <Button onPress={() => openModal(item)}>Editar</Button>
@@ -259,6 +299,37 @@ export default function AlunosScreen() {
             )}
           />
 
+          {/* Menu para selecionar turma */}
+          <Menu
+            visible={turmaMenuVisible}
+            onDismiss={() => setTurmaMenuVisible(false)}
+            anchor={
+              <Button
+                mode="outlined"
+                onPress={() => setTurmaMenuVisible(true)}
+                style={styles.input}
+                contentStyle={{ justifyContent: "space-between" }}
+              >
+                {getTurmaName(selectedTurmaId)}
+              </Button>
+            }
+          >
+            {turmas.length === 0 ? (
+              <Menu.Item title="Nenhuma turma cadastrada" disabled />
+            ) : (
+              turmas.map((turma) => (
+                <Menu.Item
+                  key={turma.id}
+                  onPress={() => {
+                    setValue("turma", turma.id);
+                    setTurmaMenuVisible(false);
+                  }}
+                  title={turma.nome}
+                />
+              ))
+            )}
+          </Menu>
+
           {loading ? (
             <ActivityIndicator
               animating={true}
@@ -285,7 +356,7 @@ export default function AlunosScreen() {
           closeOnHardwareBackPress={false}
           showConfirmButton={true}
           confirmText="OK"
-          confirmButtonColor="#3089ff"
+          confirmButtonColor={theme.colors.primary}
           onConfirmPressed={handleConfirmAlert}
         />
       </Portal>
