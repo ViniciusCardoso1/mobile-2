@@ -1,3 +1,4 @@
+// AlunosScreen.js
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, FlatList } from "react-native";
 import {
@@ -14,6 +15,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import { useForm, Controller } from "react-hook-form";
+import { MaskedTextInput } from "react-native-mask-text";
 import StorageService from "../services/StorageService";
 import AwesomeAlert from "react-native-awesome-alerts";
 
@@ -26,8 +28,6 @@ export default function AlunosScreen() {
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
   const [editingAluno, setEditingAluno] = useState(null);
-
-  // Estado para controlar menu dropdown de turmas
   const [turmaMenuVisible, setTurmaMenuVisible] = useState(false);
 
   const [showAlert, setShowAlert] = useState(false);
@@ -35,7 +35,13 @@ export default function AlunosScreen() {
   const [alertMessage, setAlertMessage] = useState("");
   const [alertConfirmCallback, setAlertConfirmCallback] = useState(null);
 
-  const { control, handleSubmit, reset, setValue, watch } = useForm({
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+  } = useForm({
     defaultValues: {
       nome: "",
       matricula: "",
@@ -45,10 +51,8 @@ export default function AlunosScreen() {
     },
   });
 
-  // Para mostrar o nome da turma selecionada no botão
   const selectedTurmaId = watch("turma");
 
-  // Função para mostrar alertas genéricos
   const showCustomAlert = (title, message, onConfirm = null) => {
     setAlertTitle(title);
     setAlertMessage(message);
@@ -56,7 +60,6 @@ export default function AlunosScreen() {
     setShowAlert(true);
   };
 
-  // Função chamada quando o usuário confirma o alerta
   const handleConfirmAlert = async () => {
     setShowAlert(false);
     if (alertConfirmCallback) {
@@ -91,13 +94,9 @@ export default function AlunosScreen() {
   const filteredAlunos = alunos.filter(
     (aluno) =>
       (aluno.nome || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (aluno.matricula || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
+      (aluno.matricula || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (aluno.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (getTurmaName(aluno.turma) || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase())
+      (getTurmaName(aluno.turma) || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const openModal = (aluno = null) => {
@@ -125,6 +124,12 @@ export default function AlunosScreen() {
   };
 
   const onSubmit = async (data) => {
+    // Validação do email com alerta
+    if (!data.email.includes("@")) {
+      showCustomAlert("Erro", "Por favor, insira um email válido contendo '@'.");
+      return;
+    }
+
     setLoading(true);
     try {
       const alunoData = {
@@ -140,10 +145,9 @@ export default function AlunosScreen() {
         );
         showCustomAlert("Sucesso", "Aluno atualizado com sucesso!");
       } else {
-        // Gera um id único se não existir
         const newAluno = { ...alunoData, id: Date.now().toString() };
         await StorageService.addItem(StorageService.KEYS.ALUNOS, newAluno);
-        showCustomAlert("Sucesso", "Aluno criado com sucesso!");
+        showCustomAlert("Sucesso", "Aluno cadastrado com sucesso!");
       }
 
       await loadAlunos();
@@ -155,23 +159,17 @@ export default function AlunosScreen() {
     }
   };
 
-  // Função corrigida para confirmar e deletar aluno
   const confirmDeleteAluno = (id) => {
     setAlertTitle("Confirmar");
     setAlertMessage("Deseja excluir este aluno?");
     setAlertConfirmCallback(() => async () => {
-      setShowAlert(false); // fecha o alerta de confirmação
-
+      setShowAlert(false);
       setLoading(true);
       try {
-        const deleted = await StorageService.deleteItem(
-          StorageService.KEYS.ALUNOS,
-          id
-        );
+        const deleted = await StorageService.deleteItem(StorageService.KEYS.ALUNOS, id);
         await loadAlunos();
 
         if (deleted) {
-          // Aguarda um pouquinho para evitar sobreposição
           setTimeout(() => {
             showCustomAlert("Sucesso", "Aluno excluído!");
           }, 300);
@@ -203,7 +201,7 @@ export default function AlunosScreen() {
       />
 
       {loading ? (
-        <ActivityIndicator animating={true} style={{ marginTop: 20 }} />
+        <ActivityIndicator animating style={{ marginTop: 20 }} />
       ) : (
         <FlatList
           data={filteredAlunos}
@@ -219,9 +217,7 @@ export default function AlunosScreen() {
               </Card.Content>
               <Card.Actions>
                 <Button onPress={() => openModal(item)}>Editar</Button>
-                <Button onPress={() => confirmDeleteAluno(item.id)}>
-                  Excluir
-                </Button>
+                <Button onPress={() => confirmDeleteAluno(item.id)}>Excluir</Button>
               </Card.Actions>
             </Card>
           )}
@@ -237,43 +233,29 @@ export default function AlunosScreen() {
       <FAB style={styles.fab} icon="plus" onPress={() => openModal()} />
 
       <Portal>
-        <Modal
-          visible={visible}
-          onDismiss={closeModal}
-          contentContainerStyle={styles.modal}
-        >
+        <Modal visible={visible} onDismiss={closeModal} contentContainerStyle={styles.modal}>
+          {/* Nome */}
           <Controller
             control={control}
             name="nome"
-            rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Nome"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-                mode="outlined"
-              />
+              <TextInput label="Nome" value={value} onChangeText={onChange} style={styles.input} mode="outlined" />
             )}
           />
+
+          {/* Matrícula */}
           <Controller
             control={control}
             name="matricula"
-            rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Matrícula"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-                mode="outlined"
-              />
+              <TextInput label="Matrícula" value={value} onChangeText={onChange} style={styles.input} mode="outlined" />
             )}
           />
+
+          {/* Email com alerta */}
           <Controller
             control={control}
             name="email"
-            rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
               <TextInput
                 label="Email"
@@ -281,25 +263,32 @@ export default function AlunosScreen() {
                 onChangeText={onChange}
                 style={styles.input}
                 mode="outlined"
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
             )}
           />
+
+          {/* Telefone com máscara e mesmo estilo */}
           <Controller
             control={control}
             name="telefone"
             render={({ field: { onChange, value } }) => (
               <TextInput
                 label="Telefone"
+                style={styles.input}
+                mode="outlined"
+                keyboardType="phone-pad"
                 value={value}
                 onChangeText={onChange}
-                style={styles.input}
-                keyboardType="phone-pad"
-                mode="outlined"
+                render={(props) => (
+                  <MaskedTextInput {...props} mask="(99) 99999-9999" value={value} onChangeText={onChange} />
+                )}
               />
             )}
           />
 
-          {/* Menu para selecionar turma */}
+          {/* Menu Turma */}
           <Menu
             visible={turmaMenuVisible}
             onDismiss={() => setTurmaMenuVisible(false)}
@@ -331,22 +320,14 @@ export default function AlunosScreen() {
           </Menu>
 
           {loading ? (
-            <ActivityIndicator
-              animating={true}
-              style={{ marginVertical: 10 }}
-            />
+            <ActivityIndicator animating style={{ marginVertical: 10 }} />
           ) : (
-            <Button
-              mode="contained"
-              onPress={handleSubmit(onSubmit)}
-              style={{ marginTop: 10 }}
-            >
+            <Button mode="contained" onPress={handleSubmit(onSubmit)} style={{ marginTop: 10 }}>
               {editingAluno ? "Salvar Alterações" : "Cadastrar"}
             </Button>
           )}
         </Modal>
 
-        {/* Alert Modal */}
         <AwesomeAlert
           show={showAlert}
           showProgress={false}
@@ -354,7 +335,7 @@ export default function AlunosScreen() {
           message={alertMessage}
           closeOnTouchOutside={false}
           closeOnHardwareBackPress={false}
-          showConfirmButton={true}
+          showConfirmButton
           confirmText="OK"
           confirmButtonColor={theme.colors.primary}
           onConfirmPressed={handleConfirmAlert}
@@ -368,17 +349,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 10 },
   searchInput: { marginBottom: 10 },
   card: { marginBottom: 10 },
-  fab: {
-    position: "absolute",
-    right: 16,
-    bottom: 16,
-    zIndex: 10,
-  },
-  modal: {
+  fab: { position: "absolute", right: 16, bottom: 16, zIndex: 10 },
+  modal: { backgroundColor: "white", padding: 20, margin: 20, borderRadius: 8 },
+  input: {
+    marginBottom: 10,
     backgroundColor: "white",
-    padding: 20,
-    margin: 20,
-    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 4,
+    padding: 10,
   },
-  input: { marginBottom: 10 },
 });

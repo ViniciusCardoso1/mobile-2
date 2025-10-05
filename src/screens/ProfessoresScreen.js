@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from "react-native-paper";
 import { useForm, Controller } from "react-hook-form";
-import { MaskService } from "react-native-mask-text";
+import { MaskedTextInput } from "react-native-mask-text";
 import StorageService from "../services/StorageService";
 import AwesomeAlert from "react-native-awesome-alerts";
 
@@ -30,7 +30,6 @@ export default function ProfessoresScreen() {
 
   const { control, handleSubmit, reset } = useForm();
 
-  // Função para mostrar alertas genéricos
   const showCustomAlert = (title, message, onConfirm = null) => {
     setAlertTitle(title);
     setAlertMessage(message);
@@ -72,23 +71,15 @@ export default function ProfessoresScreen() {
       (professor.departamento || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Função de formatação de telefone com proteção
-  const formatPhone = (phone) => {
-    if (!phone) return "";
-    if (!MaskService || !MaskService.toMask) return phone;
-    return MaskService.toMask("phone", phone, {
-      maskType: "BRL",
-      withDDD: true,
-      dddMask: "(99) 99999-9999",
-    });
-  };
-
   const openModal = (professor = null) => {
     if (professor) {
       setEditingProfessor(professor);
       reset({
-        ...professor,
-        telefone: formatPhone(professor.telefone),
+        nome: professor.nome || "",
+        email: professor.email || "",
+        telefone: professor.telefone || "",
+        especialidade: professor.especialidade || "",
+        departamento: professor.departamento || "",
       });
     } else {
       setEditingProfessor(null);
@@ -110,6 +101,11 @@ export default function ProfessoresScreen() {
   };
 
   const onSubmit = async (data) => {
+    if (!data.email.includes("@")) {
+      showCustomAlert("Erro", "Por favor, insira um email válido contendo '@'.");
+      return;
+    }
+
     setLoading(true);
     try {
       const professorData = {
@@ -125,7 +121,8 @@ export default function ProfessoresScreen() {
         );
         showCustomAlert("Sucesso", "Professor atualizado com sucesso!");
       } else {
-        await StorageService.addItem(StorageService.KEYS.PROFESSORES, professorData);
+        const newProfessor = { ...professorData, id: Date.now().toString() };
+        await StorageService.addItem(StorageService.KEYS.PROFESSORES, newProfessor);
         showCustomAlert("Sucesso", "Professor criado com sucesso!");
       }
 
@@ -185,7 +182,7 @@ export default function ProfessoresScreen() {
               <Card.Content>
                 <Title>{item.nome}</Title>
                 <Paragraph>Email: {item.email}</Paragraph>
-                <Paragraph>Telefone: {formatPhone(item.telefone)}</Paragraph>
+                <Paragraph>Telefone: {item.telefone}</Paragraph>
                 <Paragraph>Especialidade: {item.especialidade}</Paragraph>
                 <Paragraph>Departamento: {item.departamento}</Paragraph>
               </Card.Content>
@@ -232,12 +229,14 @@ export default function ProfessoresScreen() {
                 value={value}
                 onChangeText={onChange}
                 style={styles.input}
-                mode="outlined"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                mode="outlined"
               />
             )}
           />
+
+          {/* Campo telefone com máscara mantendo o estilo igual aos outros */}
           <Controller
             control={control}
             name="telefone"
@@ -245,24 +244,22 @@ export default function ProfessoresScreen() {
               <TextInput
                 label="Telefone"
                 value={value}
-                onChangeText={(text) => {
-                  if (MaskService && MaskService.toMask) {
-                    const masked = MaskService.toMask("phone", text, {
-                      maskType: "BRL",
-                      withDDD: true,
-                      dddMask: "(99) 99999-9999",
-                    });
-                    onChange(masked);
-                  } else {
-                    onChange(text);
-                  }
-                }}
+                onChangeText={onChange}
                 style={styles.input}
-                keyboardType="phone-pad"
                 mode="outlined"
+                keyboardType="phone-pad"
+                render={(props) => (
+                  <MaskedTextInput
+                    {...props}
+                    mask="(99) 99999-9999"
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                )}
               />
             )}
           />
+
           <Controller
             control={control}
             name="especialidade"
@@ -324,5 +321,12 @@ const styles = StyleSheet.create({
   card: { marginBottom: 10 },
   fab: { position: "absolute", right: 16, bottom: 16, zIndex: 10 },
   modal: { backgroundColor: "white", padding: 20, margin: 20, borderRadius: 8 },
-  input: { marginBottom: 10 },
+  input: {
+    marginBottom: 10,
+    backgroundColor: "white",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 4,
+    padding: 10,
+  },
 });
