@@ -35,8 +35,8 @@ Um aplicativo React Native desenvolvido com Expo para gerenciamento acadêmico d
 
 1. **Clone o repositório**
    ```bash
-   git clone <url-do-repositorio>
-   cd gerenciamento-turmas
+   git clone [<url-do-repositorio>](https://github.com/ViniciusCardoso1/mobile-2)
+   cd mobile-2
    ```
 
 2. **Instale as dependências**
