@@ -34,11 +34,14 @@ export default function DisciplinasScreen() {
     setShowAlert(true);
   };
 
-  const handleConfirmAlert = async () => {
+  const handleConfirmAlert = () => {
+    const callback = alertConfirmCallback;
     setShowAlert(false);
-    if (alertConfirmCallback) {
-      await alertConfirmCallback();
-      setAlertConfirmCallback(null);
+    setAlertConfirmCallback(null);
+    if (callback) {
+      setTimeout(() => {
+        callback();
+      }, 250);
     }
   };
 
@@ -117,12 +120,9 @@ export default function DisciplinasScreen() {
   };
 
   const confirmDeleteDisciplina = (id) => {
-    setAlertTitle("Confirmar");
-    setAlertMessage("Deseja excluir esta disciplina?");
-    setAlertConfirmCallback(() => async () => {
-      setShowAlert(false);
-      setLoading(true);
+    showCustomAlert("Confirmar", "Deseja excluir esta disciplina?", async () => {
       try {
+        setLoading(true);
         await DataService.deleteItem(DataService.KEYS.DISCIPLINAS, id);
         await loadDisciplinas();
       } catch {
@@ -131,7 +131,6 @@ export default function DisciplinasScreen() {
         setLoading(false);
       }
     });
-    setShowAlert(true);
   };
 
   return (
@@ -144,7 +143,7 @@ export default function DisciplinasScreen() {
         mode="outlined"
       />
       {loading ? (
-        <ActivityIndicator animating style={{ marginTop: 20 }} />
+        <ActivityIndicator animating size="large" style={styles.centeredIndicator} />
       ) : (
         <FlatList
           data={filteredDisciplinas}
@@ -160,11 +159,17 @@ export default function DisciplinasScreen() {
               </Card.Content>
               <Card.Actions>
                 <Button onPress={() => openModal(item)}>Editar</Button>
-                <Button onPress={() => confirmDeleteDisciplina(item.id)}>Excluir</Button>
+                <Button mode="contained" buttonColor="#3089ff" textColor="#fff" onPress={() => confirmDeleteDisciplina(item.id)}>
+                  Excluir
+                </Button>
               </Card.Actions>
             </Card>
           )}
-          ListEmptyComponent={<Paragraph style={{ textAlign: "center", marginTop: 20 }}>Nenhuma disciplina encontrada.</Paragraph>}
+          ListEmptyComponent={
+            <Paragraph style={{ textAlign: "center", marginTop: 20 }}>
+              Nenhuma disciplina encontrada.
+            </Paragraph>
+          }
           contentContainerStyle={{ paddingBottom: 80 }}
         />
       )}
@@ -176,7 +181,13 @@ export default function DisciplinasScreen() {
             name="nome"
             rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
-              <TextInput label="Nome da Disciplina" value={value} onChangeText={onChange} style={styles.input} mode="outlined" />
+              <TextInput
+                label="Nome da Disciplina"
+                value={value}
+                onChangeText={onChange}
+                style={styles.input}
+                mode="outlined"
+              />
             )}
           />
           <Controller
@@ -184,7 +195,13 @@ export default function DisciplinasScreen() {
             name="codigo"
             rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
-              <TextInput label="Código da Disciplina" value={value} onChangeText={onChange} style={styles.input} mode="outlined" />
+              <TextInput
+                label="Código da Disciplina"
+                value={value}
+                onChangeText={onChange}
+                style={styles.input}
+                mode="outlined"
+              />
             )}
           />
           <Controller
@@ -192,7 +209,14 @@ export default function DisciplinasScreen() {
             name="cargaHoraria"
             rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
-              <TextInput label="Carga Horária (horas)" value={value} onChangeText={onChange} style={styles.input} mode="outlined" keyboardType="numeric" />
+              <TextInput
+                label="Carga Horária (horas)"
+                value={value}
+                onChangeText={onChange}
+                style={styles.input}
+                mode="outlined"
+                keyboardType="numeric"
+              />
             )}
           />
           <Controller
@@ -200,23 +224,35 @@ export default function DisciplinasScreen() {
             name="ementa"
             rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
-              <TextInput label="Ementa" value={value} onChangeText={onChange} style={styles.input} mode="outlined" multiline numberOfLines={4} />
+              <TextInput
+                label="Ementa"
+                value={value}
+                onChangeText={onChange}
+                style={styles.input}
+                mode="outlined"
+                multiline
+                numberOfLines={4}
+              />
             )}
           />
           <Controller
             control={control}
             name="preRequisitos"
             render={({ field: { onChange, value } }) => (
-              <TextInput label="Pré-requisitos (opcional)" value={value} onChangeText={onChange} style={styles.input} mode="outlined" multiline numberOfLines={2} />
+              <TextInput
+                label="Pré-requisitos (opcional)"
+                value={value}
+                onChangeText={onChange}
+                style={styles.input}
+                mode="outlined"
+                multiline
+                numberOfLines={2}
+              />
             )}
           />
-          {loading ? (
-            <ActivityIndicator animating style={{ marginVertical: 10 }} />
-          ) : (
-            <Button mode="contained" onPress={handleSubmit(onSubmit)} style={{ marginTop: 10 }}>
-              {editingDisciplina ? "Salvar Alterações" : "Cadastrar"}
-            </Button>
-          )}
+          <Button mode="contained" onPress={handleSubmit(onSubmit)} style={{ marginTop: 10 }}>
+            {editingDisciplina ? "Salvar Alterações" : "Cadastrar"}
+          </Button>
         </Modal>
         <AwesomeAlert
           show={showAlert}
@@ -242,4 +278,5 @@ const styles = StyleSheet.create({
   fab: { position: "absolute", right: 16, bottom: 16, zIndex: 10 },
   modal: { backgroundColor: "white", padding: 20, margin: 20, borderRadius: 8 },
   input: { marginBottom: 10 },
+  centeredIndicator: { marginTop: 20, alignSelf: "center" },
 });

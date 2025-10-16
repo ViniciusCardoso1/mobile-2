@@ -19,16 +19,13 @@ import AwesomeAlert from "react-native-awesome-alerts";
 
 export default function TurmasScreen() {
   const theme = useTheme();
-
   const [turmas, setTurmas] = useState([]);
   const [professores, setProfessores] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
   const [editingTurma, setEditingTurma] = useState(null);
-
   const [professorMenuVisible, setProfessorMenuVisible] = useState(false);
-
   const [showAlert, setShowAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
@@ -44,10 +41,13 @@ export default function TurmasScreen() {
   };
 
   const handleConfirmAlert = async () => {
+    const callback = alertConfirmCallback;
     setShowAlert(false);
-    if (alertConfirmCallback) {
-      await alertConfirmCallback();
-      setAlertConfirmCallback(null);
+    setAlertConfirmCallback(null);
+    if (callback) {
+      setTimeout(async () => {
+        await callback();
+      }, 300);
     }
   };
 
@@ -70,7 +70,6 @@ export default function TurmasScreen() {
       const data = await DataService.loadData(DataService.KEYS.PROFESSORES);
       setProfessores(data || []);
     } catch (error) {
-      console.error("Erro ao carregar professores:", error);
       setProfessores([]);
     }
   };
@@ -123,23 +122,14 @@ export default function TurmasScreen() {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const turmaData = {
-        ...data,
-        capacidade: parseInt(data.capacidade) || 0,
-      };
-
+      const turmaData = { ...data, capacidade: parseInt(data.capacidade) || 0 };
       if (editingTurma) {
-        await DataService.updateItem(
-          DataService.KEYS.TURMAS,
-          editingTurma.id,
-          turmaData
-        );
+        await DataService.updateItem(DataService.KEYS.TURMAS, editingTurma.id, turmaData);
         showCustomAlert("Sucesso", "Turma atualizada com sucesso!");
       } else {
         await DataService.addItem(DataService.KEYS.TURMAS, turmaData);
         showCustomAlert("Sucesso", "Turma criada com sucesso!");
       }
-
       await loadTurmas();
       closeModal();
     } catch (error) {
@@ -149,29 +139,17 @@ export default function TurmasScreen() {
     }
   };
 
-  // ✅ Mantém apenas o alerta de confirmação, sem tela cinza
   const confirmDeleteTurma = (id) => {
-    setAlertTitle("Confirmar");
-    setAlertMessage("Deseja excluir esta turma?");
-    setAlertConfirmCallback(() => async () => {
-      setShowAlert(false);
+    showCustomAlert("Confirmar", "Deseja excluir esta turma?", async () => {
       setLoading(true);
       try {
-        const deleted = await DataService.deleteItem(
-          DataService.KEYS.TURMAS,
-          id
-        );
+        await DataService.deleteItem(DataService.KEYS.TURMAS, id);
         await loadTurmas();
-        if (!deleted) {
-          console.warn("Turma não encontrada!");
-        }
       } catch (error) {
-        console.error("Erro ao excluir turma:", error);
       } finally {
         setLoading(false);
       }
     });
-    setShowAlert(true);
   };
 
   const getProfessorName = (professorId) => {
@@ -190,7 +168,6 @@ export default function TurmasScreen() {
         style={styles.searchInput}
         mode="outlined"
       />
-
       {loading ? (
         <ActivityIndicator animating={true} style={{ marginTop: 20 }} />
       ) : (
@@ -203,16 +180,12 @@ export default function TurmasScreen() {
                 <Title>{item.nome}</Title>
                 <Paragraph>Código: {item.codigo}</Paragraph>
                 <Paragraph>Período: {item.periodo}</Paragraph>
-                <Paragraph>
-                  Professor: {getProfessorName(item.professor)}
-                </Paragraph>
+                <Paragraph>Professor: {getProfessorName(item.professor)}</Paragraph>
                 <Paragraph>Capacidade: {item.capacidade} alunos</Paragraph>
               </Card.Content>
               <Card.Actions>
                 <Button onPress={() => openModal(item)}>Editar</Button>
-                <Button onPress={() => confirmDeleteTurma(item.id)}>
-                  Excluir
-                </Button>
+                <Button onPress={() => confirmDeleteTurma(item.id)}>Excluir</Button>
               </Card.Actions>
             </Card>
           )}
@@ -224,28 +197,15 @@ export default function TurmasScreen() {
           contentContainerStyle={{ paddingBottom: 80 }}
         />
       )}
-
       <FAB style={styles.fab} icon="plus" onPress={() => openModal()} />
-
-      {/* ✅ Portal apenas para Modal */}
       <Portal>
-        <Modal
-          visible={visible}
-          onDismiss={closeModal}
-          contentContainerStyle={styles.modal}
-        >
+        <Modal visible={visible} onDismiss={closeModal} contentContainerStyle={styles.modal}>
           <Controller
             control={control}
             name="nome"
             rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Nome da Turma"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-                mode="outlined"
-              />
+              <TextInput label="Nome da Turma" value={value} onChangeText={onChange} style={styles.input} mode="outlined" />
             )}
           />
           <Controller
@@ -253,13 +213,7 @@ export default function TurmasScreen() {
             name="codigo"
             rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Código da Turma"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-                mode="outlined"
-              />
+              <TextInput label="Código da Turma" value={value} onChangeText={onChange} style={styles.input} mode="outlined" />
             )}
           />
           <Controller
@@ -267,26 +221,14 @@ export default function TurmasScreen() {
             name="periodo"
             rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Período (ex: 2024.1)"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-                mode="outlined"
-              />
+              <TextInput label="Período (ex: 2024.1)" value={value} onChangeText={onChange} style={styles.input} mode="outlined" />
             )}
           />
-
           <Menu
             visible={professorMenuVisible}
             onDismiss={() => setProfessorMenuVisible(false)}
             anchor={
-              <Button
-                mode="outlined"
-                onPress={() => setProfessorMenuVisible(true)}
-                style={styles.input}
-                contentStyle={{ justifyContent: "space-between" }}
-              >
+              <Button mode="outlined" onPress={() => setProfessorMenuVisible(true)} style={styles.input} contentStyle={{ justifyContent: "space-between" }}>
                 {getProfessorName(selectedProfessorId)}
               </Button>
             }
@@ -306,38 +248,23 @@ export default function TurmasScreen() {
               ))
             )}
           </Menu>
-
           <Controller
             control={control}
             name="capacidade"
             rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Capacidade de Alunos"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-                mode="outlined"
-                keyboardType="numeric"
-              />
+              <TextInput label="Capacidade de Alunos" value={value} onChangeText={onChange} style={styles.input} mode="outlined" keyboardType="numeric" />
             )}
           />
-
           {loading ? (
             <ActivityIndicator animating={true} style={{ marginVertical: 10 }} />
           ) : (
-            <Button
-              mode="contained"
-              onPress={handleSubmit(onSubmit)}
-              style={{ marginTop: 10 }}
-            >
+            <Button mode="contained" onPress={handleSubmit(onSubmit)} style={{ marginTop: 10 }}>
               {editingTurma ? "Salvar Alterações" : "Cadastrar"}
             </Button>
           )}
         </Modal>
       </Portal>
-
-      {/* ✅ MOVIDO para fora do Portal (corrige a tela cinza) */}
       <AwesomeAlert
         show={showAlert}
         showProgress={false}
@@ -358,17 +285,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 10 },
   searchInput: { marginBottom: 10 },
   card: { marginBottom: 10 },
-  fab: {
-    position: "absolute",
-    right: 16,
-    bottom: 16,
-    zIndex: 10,
-  },
-  modal: {
-    backgroundColor: "white",
-    padding: 20,
-    margin: 20,
-    borderRadius: 8,
-  },
+  fab: { position: "absolute", right: 16, bottom: 16, zIndex: 10 },
+  modal: { backgroundColor: "white", padding: 20, margin: 20, borderRadius: 8 },
   input: { marginBottom: 10 },
 });

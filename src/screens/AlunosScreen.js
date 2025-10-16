@@ -173,7 +173,14 @@ export default function AlunosScreen() {
             </Card.Content>
             <Card.Actions>
               <Button onPress={() => openModal(item)}>Editar</Button>
-              <Button onPress={() => confirmDeleteAluno(item.id)}>Excluir</Button>
+              <Button
+                mode="contained"
+                buttonColor="#3089ff"
+                textColor="#fff"
+                onPress={() => confirmDeleteAluno(item.id)}
+              >
+                Excluir
+              </Button>
             </Card.Actions>
           </Card>
         )}

@@ -35,11 +35,14 @@ export default function ProfessoresScreen() {
     setShowAlert(true);
   };
 
-  const handleConfirmAlert = async () => {
+  const handleConfirmAlert = () => {
     setShowAlert(false);
     if (alertConfirmCallback) {
-      await alertConfirmCallback();
+      const callback = alertConfirmCallback;
       setAlertConfirmCallback(null);
+      setTimeout(() => {
+        callback();
+      }, 300);
     }
   };
 
@@ -128,10 +131,7 @@ export default function ProfessoresScreen() {
   };
 
   const confirmDeleteProfessor = (id) => {
-    setAlertTitle("Confirmar");
-    setAlertMessage("Deseja excluir este professor?");
-    setAlertConfirmCallback(() => async () => {
-      setShowAlert(false);
+    showCustomAlert("Confirmar", "Deseja excluir este professor?", async () => {
       setLoading(true);
       try {
         await DataService.deleteItem(DataService.KEYS.PROFESSORES, id);
@@ -142,7 +142,6 @@ export default function ProfessoresScreen() {
         setLoading(false);
       }
     });
-    setShowAlert(true);
   };
 
   return (
@@ -183,15 +182,9 @@ export default function ProfessoresScreen() {
           contentContainerStyle={{ paddingBottom: 80 }}
         />
       )}
-
       <FAB style={styles.fab} icon="plus" onPress={() => openModal()} />
-
       <Portal>
-        <Modal
-          visible={visible}
-          onDismiss={closeModal}
-          contentContainerStyle={styles.modal}
-        >
+        <Modal visible={visible} onDismiss={closeModal} contentContainerStyle={styles.modal}>
           <Controller
             control={control}
             name="nome"
@@ -275,11 +268,7 @@ export default function ProfessoresScreen() {
           {loading ? (
             <ActivityIndicator animating={true} style={{ marginVertical: 10 }} />
           ) : (
-            <Button
-              mode="contained"
-              onPress={handleSubmit(onSubmit)}
-              style={{ marginTop: 10 }}
-            >
+            <Button mode="contained" onPress={handleSubmit(onSubmit)} style={{ marginTop: 10 }}>
               {editingProfessor ? "Salvar Alterações" : "Cadastrar"}
             </Button>
           )}
@@ -306,11 +295,6 @@ const styles = StyleSheet.create({
   searchInput: { marginBottom: 10 },
   card: { marginBottom: 10 },
   fab: { position: "absolute", right: 16, bottom: 16, zIndex: 10 },
-  modal: {
-    backgroundColor: "white",
-    padding: 20,
-    margin: 20,
-    borderRadius: 8,
-  },
+  modal: { backgroundColor: "white", padding: 20, margin: 20, borderRadius: 8 },
   input: { marginBottom: 10, width: "100%" },
 });

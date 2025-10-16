@@ -1,117 +1,112 @@
 {
   "turmas": [
     {
-      "nome": "Tuma 80",
-      "codigo": "80",
-      "periodo": "2024/2",
-      "professor": "1760580733626",
-      "capacidade": 20,
-      "id": "97e3"
+      "id": "6fe2",
+      "nome": "Desenvolvimento Web Avançado",
+      "codigo": "WEB401",
+      "periodo": "2025/1",
+      "professor": "P001",
+      "capacidade": 22
+    },
+    {
+      "id": "7a3b",
+      "nome": "Banco de Dados NoSQL",
+      "codigo": "BDD305",
+      "periodo": "2025/2",
+      "professor": "P002",
+      "capacidade": 18
     }
   ],
   "alunos": [
     {
+      "id": "aeb6",
       "nome": "Ana Clara",
       "matricula": "A001",
       "email": "ana@email.com",
-      "telefone": "11999991111",
-      "id": "1700000000000-11111",
-      "createdAt": "2023-11-15T10:00:00.000Z",
-      "updatedAt": "2023-11-15T10:00:00.000Z"
+      "telefone": "11999991111"
     },
     {
-      "id": "1760580855424",
-      "nome": "Lucas",
+      "id": "57a6",
+      "nome": "Bruno Silva",
+      "matricula": "A002",
+      "email": "bruno@email.com",
+      "telefone": "11999992222"
+    },
+    {
+      "id": "c1f2",
+      "nome": "Carlos Oliveira",
       "matricula": "A003",
-      "email": "lucas@aluno.com",
-      "telefone": "48213542132",
-      "turma": "97e3"
-    },
-    {
-      "id": "1760582760160",
-      "nome": "Vinicius",
-      "matricula": "A004",
-      "email": "vinicius@aluno.com",
-      "telefone": "48565165456",
-      "turma": "97e3"
+      "email": "carlos@email.com",
+      "telefone": "11999993333"
     }
   ],
   "professores": [
     {
-      "id": "1760580733626",
-      "nome": "Pedro",
-      "email": "pedro@professor.com",
-      "telefone": "48123123123",
-      "especialidade": "Matemárica",
-      "departamento": "Matemárica"
+      "id": "P001",
+      "nome": "Dr. João Pereira",
+      "titulacao": "Doutor",
+      "email": "joao@universidade.com"
     },
     {
-      "id": "1760580759956",
-      "nome": "Pedro 2",
-      "email": "pedro2@professor.com",
-      "telefone": "48654151651",
-      "especialidade": "teste",
-      "departamento": "piso 1"
+      "id": "P002",
+      "nome": "Ms. Maria Souza",
+      "titulacao": "Mestre",
+      "email": "maria@universidade.com"
+    },
+    {
+      "id": "P003",
+      "nome": "Esp. Fernanda Lima",
+      "titulacao": "Especialista",
+      "email": "fernanda@universidade.com"
     }
   ],
   "disciplinas": [
     {
-      "nome": "Matemática",
-      "codigo": "m01",
-      "cargaHoraria": 40,
-      "ementa": "soma e subtração",
-      "preRequisitos": "nenhum",
-      "id": "40c3"
+      "id": "D001",
+      "nome": "Lógica de Programação",
+      "codigo": "LP101",
+      "carga_horaria": 60,
+      "departamento": "Ciências da Computação"
     },
     {
-      "id": "2506",
-      "nome": "Português",
-      "codigo": "pt01",
-      "cargaHoraria": 20,
-      "ementa": "interpretação de texto",
-      "preRequisitos": "nenhum"
+      "id": "D002",
+      "nome": "Engenharia de Software",
+      "codigo": "ES203",
+      "carga_horaria": 80,
+      "departamento": "Engenharia"
+    },
+    {
+      "id": "D003",
+      "nome": "Redes de Computadores",
+      "codigo": "RC301",
+      "carga_horaria": 60,
+      "departamento": "Tecnologia"
     }
   ],
   "notas": [
     {
-      "id": "1760580906773",
-      "aluno": "1760580855424",
-      "disciplina": "40c3",
-      "nota": 10,
-      "data": "2025-10-16",
-      "observacoes": "muito bom"
+      "id": "1",
+      "aluno": "aeb6",
+      "disciplina": "D001",
+      "nota": 9.5,
+      "data": "2025-06-10",
+      "observacoes": "Excelente desempenho na prova final."
     },
     {
-      "id": "1760581769163",
-      "aluno": "1760580855424",
-      "disciplina": "40c3",
-      "nota": 10,
-      "data": "2025-10-16",
-      "observacoes": ""
+      "id": "2",
+      "aluno": "57a6",
+      "disciplina": "D002",
+      "nota": 7,
+      "data": "2025-06-15",
+      "observacoes": "Aprovado com ressalvas no projeto."
     },
     {
-      "id": "1760581782309",
-      "aluno": "1700000000000-11111",
-      "disciplina": "",
-      "nota": 10,
-      "data": "2025-10-16",
-      "observacoes": ""
-    },
-    {
-      "id": "1760582875599",
-      "aluno": "1760580855424",
-      "disciplina": "2506",
+      "id": "3",
+      "aluno": "c1f2",
+      "disciplina": "D001",
       "nota": 8,
-      "data": "2025-10-16",
-      "observacoes": ""
-    },
-    {
-      "id": "1760582887480",
-      "aluno": "1700000000000-11111",
-      "disciplina": "",
-      "nota": 2,
-      "data": "2025-10-16",
-      "observacoes": ""
+      "data": "2025-06-12",
+      "observacoes": "Bom trabalho nos exercícios práticos."
     }
   ]
 }
