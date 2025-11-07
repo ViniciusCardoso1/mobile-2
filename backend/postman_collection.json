@@ -1,0 +1,833 @@
+{
+  "info": {
+    "name": "Mobile Backend API",
+    "description": "Collection completa da API do backend mobile com todos os CRUDs e regras de negócio",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Professores",
+      "item": [
+        {
+          "name": "Listar Professores (com paginação)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/professores?page=1&limit=10&search=",
+              "host": ["{{base_url}}"],
+              "path": ["professores"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"},
+                {"key": "search", "value": ""}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar Professor por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/professores/:id",
+              "host": ["{{base_url}}"],
+              "path": ["professores", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Criar Professor",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Dr. Pedro Santos\",\n  \"codigo\": \"P004\",\n  \"titulacao\": \"Doutor\",\n  \"email\": \"pedro@universidade.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/professores",
+              "host": ["{{base_url}}"],
+              "path": ["professores"]
+            }
+          }
+        },
+        {
+          "name": "Atualizar Professor",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Dr. Pedro Santos Silva\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/professores/:id",
+              "host": ["{{base_url}}"],
+              "path": ["professores", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Deletar Professor",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/professores/:id",
+              "host": ["{{base_url}}"],
+              "path": ["professores", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Erro: Código duplicado",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Teste\",\n  \"codigo\": \"P001\",\n  \"titulacao\": \"Doutor\",\n  \"email\": \"teste@universidade.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/professores",
+              "host": ["{{base_url}}"],
+              "path": ["professores"]
+            }
+          }
+        },
+        {
+          "name": "Erro: Email duplicado",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Teste\",\n  \"codigo\": \"P999\",\n  \"titulacao\": \"Doutor\",\n  \"email\": \"joao@universidade.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/professores",
+              "host": ["{{base_url}}"],
+              "path": ["professores"]
+            }
+          }
+        },
+        {
+          "name": "Erro: Email inválido",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Teste\",\n  \"codigo\": \"P999\",\n  \"titulacao\": \"Doutor\",\n  \"email\": \"email-invalido\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/professores",
+              "host": ["{{base_url}}"],
+              "path": ["professores"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Disciplinas",
+      "item": [
+        {
+          "name": "Listar Disciplinas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/disciplinas?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["disciplinas"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar Disciplina por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/disciplinas/:id",
+              "host": ["{{base_url}}"],
+              "path": ["disciplinas", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Criar Disciplina",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Inteligência Artificial\",\n  \"codigo\": \"IA401\",\n  \"carga_horaria\": 80,\n  \"departamento\": \"Ciências da Computação\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/disciplinas",
+              "host": ["{{base_url}}"],
+              "path": ["disciplinas"]
+            }
+          }
+        },
+        {
+          "name": "Atualizar Disciplina",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"carga_horaria\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/disciplinas/:id",
+              "host": ["{{base_url}}"],
+              "path": ["disciplinas", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Deletar Disciplina",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/disciplinas/:id",
+              "host": ["{{base_url}}"],
+              "path": ["disciplinas", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Erro: Código duplicado",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Teste\",\n  \"codigo\": \"LP101\",\n  \"carga_horaria\": 60,\n  \"departamento\": \"Teste\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/disciplinas",
+              "host": ["{{base_url}}"],
+              "path": ["disciplinas"]
+            }
+          }
+        },
+        {
+          "name": "Erro: Carga horária não múltiplo de 10",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Teste\",\n  \"codigo\": \"TEST001\",\n  \"carga_horaria\": 65,\n  \"departamento\": \"Teste\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/disciplinas",
+              "host": ["{{base_url}}"],
+              "path": ["disciplinas"]
+            }
+          }
+        },
+        {
+          "name": "Erro: Nome duplicado",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Lógica de Programação\",\n  \"codigo\": \"TEST001\",\n  \"carga_horaria\": 60,\n  \"departamento\": \"Teste\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/disciplinas",
+              "host": ["{{base_url}}"],
+              "path": ["disciplinas"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Turmas",
+      "item": [
+        {
+          "name": "Listar Turmas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/turmas?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["turmas"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar Turma por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/turmas/:id",
+              "host": ["{{base_url}}"],
+              "path": ["turmas", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Criar Turma",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Mobile Development\",\n  \"codigo\": \"MOB301\",\n  \"periodo\": \"2025/1\",\n  \"capacidade\": 25,\n  \"professor\": \"<professor_id>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/turmas",
+              "host": ["{{base_url}}"],
+              "path": ["turmas"]
+            }
+          }
+        },
+        {
+          "name": "Atualizar Turma",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"capacidade\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/turmas/:id",
+              "host": ["{{base_url}}"],
+              "path": ["turmas", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Deletar Turma",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/turmas/:id",
+              "host": ["{{base_url}}"],
+              "path": ["turmas", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Erro: Código duplicado",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Teste\",\n  \"codigo\": \"WEB401\",\n  \"periodo\": \"2025/1\",\n  \"capacidade\": 20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/turmas",
+              "host": ["{{base_url}}"],
+              "path": ["turmas"]
+            }
+          }
+        },
+        {
+          "name": "Erro: Professor não encontrado",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Teste\",\n  \"codigo\": \"TEST001\",\n  \"periodo\": \"2025/1\",\n  \"capacidade\": 20,\n  \"professor\": \"00000000-0000-0000-0000-000000000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/turmas",
+              "host": ["{{base_url}}"],
+              "path": ["turmas"]
+            }
+          }
+        },
+        {
+          "name": "Erro: Código e período duplicados",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Teste\",\n  \"codigo\": \"WEB401\",\n  \"periodo\": \"2025/1\",\n  \"capacidade\": 20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/turmas",
+              "host": ["{{base_url}}"],
+              "path": ["turmas"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alunos",
+      "item": [
+        {
+          "name": "Listar Alunos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/alunos?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["alunos"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar Aluno por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/alunos/:id",
+              "host": ["{{base_url}}"],
+              "path": ["alunos", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Criar Aluno",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Diego Costa\",\n  \"matricula\": \"A004\",\n  \"email\": \"diego@email.com\",\n  \"telefone\": \"11999994444\",\n  \"turma\": \"<turma_id>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/alunos",
+              "host": ["{{base_url}}"],
+              "path": ["alunos"]
+            }
+          }
+        },
+        {
+          "name": "Atualizar Aluno",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Diego Costa Silva\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/alunos/:id",
+              "host": ["{{base_url}}"],
+              "path": ["alunos", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Deletar Aluno",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/alunos/:id",
+              "host": ["{{base_url}}"],
+              "path": ["alunos", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Erro: Matrícula duplicada",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Teste\",\n  \"matricula\": \"A001\",\n  \"email\": \"teste@email.com\",\n  \"telefone\": \"11999999999\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/alunos",
+              "host": ["{{base_url}}"],
+              "path": ["alunos"]
+            }
+          }
+        },
+        {
+          "name": "Erro: Email duplicado",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Teste\",\n  \"matricula\": \"A999\",\n  \"email\": \"ana@email.com\",\n  \"telefone\": \"11999999999\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/alunos",
+              "host": ["{{base_url}}"],
+              "path": ["alunos"]
+            }
+          }
+        },
+        {
+          "name": "Erro: Capacidade da turma excedida",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Teste\",\n  \"matricula\": \"A999\",\n  \"email\": \"teste@email.com\",\n  \"telefone\": \"11999999999\",\n  \"turma\": \"<turma_id_cheia>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/alunos",
+              "host": ["{{base_url}}"],
+              "path": ["alunos"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notas",
+      "item": [
+        {
+          "name": "Listar Notas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/notas?page=1&limit=10&aluno=&disciplina=",
+              "host": ["{{base_url}}"],
+              "path": ["notas"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"},
+                {"key": "aluno", "value": ""},
+                {"key": "disciplina", "value": ""}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar Nota por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/notas/:id",
+              "host": ["{{base_url}}"],
+              "path": ["notas", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Criar Nota",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aluno\": \"<aluno_id>\",\n  \"disciplina\": \"<disciplina_id>\",\n  \"nota\": 8.5,\n  \"data\": \"2025-06-20\",\n  \"observacoes\": \"Bom desempenho\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/notas",
+              "host": ["{{base_url}}"],
+              "path": ["notas"]
+            }
+          }
+        },
+        {
+          "name": "Atualizar Nota",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nota\": 9.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/notas/:id",
+              "host": ["{{base_url}}"],
+              "path": ["notas", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Deletar Nota",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/notas/:id",
+              "host": ["{{base_url}}"],
+              "path": ["notas", ":id"],
+              "variable": [{"key": "id", "value": ""}]
+            }
+          }
+        },
+        {
+          "name": "Erro: Aluno não encontrado",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aluno\": \"00000000-0000-0000-0000-000000000000\",\n  \"disciplina\": \"<disciplina_id>\",\n  \"nota\": 8.5,\n  \"data\": \"2025-06-20\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/notas",
+              "host": ["{{base_url}}"],
+              "path": ["notas"]
+            }
+          }
+        },
+        {
+          "name": "Erro: Disciplina não encontrada",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aluno\": \"<aluno_id>\",\n  \"disciplina\": \"00000000-0000-0000-0000-000000000000\",\n  \"nota\": 8.5,\n  \"data\": \"2025-06-20\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/notas",
+              "host": ["{{base_url}}"],
+              "path": ["notas"]
+            }
+          }
+        },
+        {
+          "name": "Erro: Nota duplicada (mesmo aluno, disciplina e data)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aluno\": \"<aluno_id>\",\n  \"disciplina\": \"<disciplina_id>\",\n  \"nota\": 8.5,\n  \"data\": \"2025-06-10\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/notas",
+              "host": ["{{base_url}}"],
+              "path": ["notas"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Estatísticas do Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dashboard/stats",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "stats"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

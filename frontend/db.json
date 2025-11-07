@@ -26,11 +26,12 @@
       "telefone": "11999991111"
     },
     {
-      "id": "57a6",
       "nome": "Bruno Silva",
       "matricula": "A002",
       "email": "bruno@email.com",
-      "telefone": "11999992222"
+      "telefone": "11999992222",
+      "turma": "6fe2",
+      "id": "57a6"
     },
     {
       "id": "c1f2",

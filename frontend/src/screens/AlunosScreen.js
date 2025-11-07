@@ -127,8 +127,9 @@ export default function AlunosScreen() {
       }
       await loadAlunos();
       closeModal();
-    } catch {
-      showCustomAlert("Erro", "Não foi possível salvar o aluno");
+    } catch (error) {
+      const errorMessage = error.message || "Não foi possível salvar o aluno";
+      showCustomAlert("Erro", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -139,8 +140,9 @@ export default function AlunosScreen() {
       try {
         await DataService.deleteItem(DataService.KEYS.ALUNOS, id);
         await loadAlunos();
-      } catch {
-        showCustomAlert("Erro", "Não foi possível excluir o aluno");
+      } catch (error) {
+        const errorMessage = error.message || "Não foi possível excluir o aluno";
+        showCustomAlert("Erro", errorMessage);
       }
     });
   };
