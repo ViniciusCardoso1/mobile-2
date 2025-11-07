@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsInt, Min, Max, Length, Matches } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsInt, Min, Max, Length, Matches } from 'class-validator';
 
 export class CreateDisciplinaDto {
   @IsString()
@@ -21,5 +21,9 @@ export class CreateDisciplinaDto {
   @IsNotEmpty({ message: 'Departamento é obrigatório' })
   @Length(3, 255, { message: 'Departamento deve ter entre 3 e 255 caracteres' })
   departamento: string;
+
+  @IsOptional()
+  @IsString()
+  ementa?: string;
 }
 

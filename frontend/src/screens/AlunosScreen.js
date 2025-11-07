@@ -14,7 +14,6 @@ import {
   useTheme,
 } from "react-native-paper";
 import { useForm, Controller } from "react-hook-form";
-import { MaskedTextInput } from "react-native-mask-text";
 import DataService from "../services/DataService";
 import AwesomeAlert from "react-native-awesome-alerts";
 
@@ -61,8 +60,8 @@ export default function AlunosScreen() {
         DataService.loadData(DataService.KEYS.ALUNOS),
         DataService.loadData(DataService.KEYS.TURMAS),
       ]);
-      setAlunos(alunosData || []);
-      setTurmas(turmasData || []);
+      setAlunos(Array.isArray(alunosData) ? alunosData : []);
+      setTurmas(Array.isArray(turmasData) ? turmasData : []);
     } catch {
       showCustomAlert("Erro", "Não foi possível carregar os alunos ou turmas");
       setAlunos([]);
@@ -76,23 +75,43 @@ export default function AlunosScreen() {
     loadAlunos();
   }, []);
 
-  const filteredAlunos = alunos.filter(
-    (aluno) =>
-      (aluno.nome || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (aluno.matricula || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (aluno.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (getTurmaName(aluno.turma) || "").toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const getTurmaName = (turmaId) => {
+    if (!turmaId || !Array.isArray(turmas)) return "Nenhuma turma";
+    const turma = turmas.find((t) => t && (t.id === turmaId || String(t.id) === String(turmaId)));
+    return turma ? turma.nome : "Nenhuma turma";
+  };
+
+  const filteredAlunos = Array.isArray(alunos) ? alunos.filter(
+    (aluno) => {
+      if (!aluno) return false;
+      try {
+        const turmaId = aluno.turmaId || aluno.turma?.id || aluno.turma;
+        const turmaName = getTurmaName(turmaId);
+        return (
+          (aluno.nome || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (aluno.matricula || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (aluno.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (aluno.telefone || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (turmaName || "").toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      } catch (error) {
+        console.error("Erro ao filtrar aluno:", error);
+        return false;
+      }
+    }
+  ) : [];
 
   const openModal = (aluno = null) => {
     if (aluno) {
       setEditingAluno(aluno);
+      // Normalizar turma ID
+      const turmaId = aluno.turmaId || aluno.turma?.id || aluno.turma || "";
       reset({
         nome: aluno.nome || "",
         matricula: aluno.matricula || "",
         email: aluno.email || "",
         telefone: aluno.telefone || "",
-        turma: aluno.turma || "",
+        turma: turmaId,
       });
     } else {
       setEditingAluno(null);
@@ -109,20 +128,40 @@ export default function AlunosScreen() {
   };
 
   const onSubmit = async (data) => {
-    if (!data.email.includes("@")) {
+    // Validação antes de enviar
+    if (!data.nome || data.nome.trim() === "") {
+      showCustomAlert("Erro", "Por favor, informe o nome do aluno");
+      return;
+    }
+    if (!data.matricula || data.matricula.trim() === "") {
+      showCustomAlert("Erro", "Por favor, informe a matrícula do aluno");
+      return;
+    }
+    if (!data.email || !data.email.includes("@")) {
       showCustomAlert("Erro", "Por favor, insira um email válido contendo '@'.");
+      return;
+    }
+    if (!data.telefone || data.telefone.replace(/\D/g, "").length < 10) {
+      showCustomAlert("Erro", "Por favor, informe um telefone válido");
       return;
     }
 
     setLoading(true);
     try {
-      const alunoData = { ...data, telefone: data.telefone?.replace(/\D/g, "") || "" };
+      const alunoData = { 
+        nome: data.nome.trim(),
+        matricula: data.matricula.trim().toUpperCase(),
+        email: data.email.trim(),
+        telefone: data.telefone.replace(/\D/g, ""),
+        // Só incluir turma se foi selecionada
+        ...(data.turma && data.turma !== "" ? { turma: data.turma } : {}),
+      };
       if (editingAluno) {
         await DataService.updateItem(DataService.KEYS.ALUNOS, editingAluno.id, alunoData);
         showCustomAlert("Sucesso", "Aluno atualizado com sucesso!");
       } else {
-        const newAluno = { ...alunoData, id: Date.now().toString() };
-        await DataService.addItem(DataService.KEYS.ALUNOS, newAluno);
+        // Não criar ID manualmente, o backend gera UUID
+        await DataService.addItem(DataService.KEYS.ALUNOS, alunoData);
         showCustomAlert("Sucesso", "Aluno criado com sucesso!");
       }
       await loadAlunos();
@@ -147,11 +186,6 @@ export default function AlunosScreen() {
     });
   };
 
-  const getTurmaName = (turmaId) => {
-    const turma = turmas.find((t) => t.id === turmaId);
-    return turma ? turma.nome : "Selecione uma turma";
-  };
-
   return (
     <View style={styles.container}>
       <TextInput
@@ -163,29 +197,38 @@ export default function AlunosScreen() {
       />
       <FlatList
         data={filteredAlunos}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
-          <Card style={styles.card}>
-            <Card.Content>
-              <Title>{item.nome}</Title>
-              <Paragraph>Matrícula: {item.matricula}</Paragraph>
-              <Paragraph>Email: {item.email}</Paragraph>
-              <Paragraph>Telefone: {item.telefone}</Paragraph>
-              <Paragraph>Turma: {getTurmaName(item.turma)}</Paragraph>
-            </Card.Content>
-            <Card.Actions>
-              <Button onPress={() => openModal(item)}>Editar</Button>
-              <Button
-                mode="contained"
-                buttonColor="#3089ff"
-                textColor="#fff"
-                onPress={() => confirmDeleteAluno(item.id)}
-              >
-                Excluir
-              </Button>
-            </Card.Actions>
-          </Card>
-        )}
+        keyExtractor={(item, index) => item?.id ? String(item.id) : `aluno-${index}`}
+        renderItem={({ item }) => {
+          if (!item) return null;
+          try {
+            const turmaId = item.turmaId || item.turma?.id || item.turma;
+            return (
+              <Card style={styles.card}>
+                <Card.Content>
+                  <Title>{item.nome || "Sem nome"}</Title>
+                  <Paragraph>Matrícula: {item.matricula || "N/A"}</Paragraph>
+                  <Paragraph>Email: {item.email || "N/A"}</Paragraph>
+                  <Paragraph>Telefone: {item.telefone || "N/A"}</Paragraph>
+                  <Paragraph>Turma: {getTurmaName(turmaId)}</Paragraph>
+                </Card.Content>
+                <Card.Actions>
+                  <Button onPress={() => openModal(item)}>Editar</Button>
+                  <Button
+                    mode="contained"
+                    buttonColor="#3089ff"
+                    textColor="#fff"
+                    onPress={() => confirmDeleteAluno(item.id)}
+                  >
+                    Excluir
+                  </Button>
+                </Card.Actions>
+              </Card>
+            );
+          } catch (error) {
+            console.error("Erro ao renderizar aluno:", error);
+            return null;
+          }
+        }}
         ListEmptyComponent={
           <Paragraph style={{ textAlign: "center", marginTop: 20 }}>
             Nenhum aluno encontrado.
@@ -237,9 +280,7 @@ export default function AlunosScreen() {
                 keyboardType="phone-pad"
                 value={value}
                 onChangeText={onChange}
-                render={(props) => (
-                  <MaskedTextInput {...props} mask="(99) 99999-9999" value={value} onChangeText={onChange} />
-                )}
+                placeholder="(00) 00000-0000"
               />
             )}
           />

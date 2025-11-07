@@ -80,11 +80,12 @@ const NotasScreen = () => {
         DataService.loadData(DataService.KEYS.ALUNOS),
         DataService.loadData(DataService.KEYS.DISCIPLINAS),
       ]);
-      setNotas(notasData || []);
-      setAlunos(alunosData || []);
-      setDisciplinas(disciplinasData || []);
+      setNotas(Array.isArray(notasData) ? notasData : []);
+      setAlunos(Array.isArray(alunosData) ? alunosData : []);
+      setDisciplinas(Array.isArray(disciplinasData) ? disciplinasData : []);
     } catch (error) {
-      showCustomAlert("Erro", "Não foi possível carregar os dados");
+      console.error("Erro ao carregar dados:", error);
+      showCustomAlert("Erro", error.message || "Não foi possível carregar os dados");
       setNotas([]);
       setAlunos([]);
       setDisciplinas([]);
@@ -96,11 +97,23 @@ const NotasScreen = () => {
   const openModal = (nota = null) => {
     if (nota) {
       setEditingNota(nota);
+      // Normalizar: pode vir como objeto relacionado ou ID
+      const alunoId = nota.alunoId || (nota.aluno?.id || nota.aluno) || "";
+      const disciplinaId = nota.disciplinaId || (nota.disciplina?.id || nota.disciplina) || "";
+      // Normalizar data: pode vir como Date ou string
+      let dataStr = "";
+      if (nota.data) {
+        if (nota.data instanceof Date) {
+          dataStr = nota.data.toISOString().split("T")[0];
+        } else if (typeof nota.data === 'string') {
+          dataStr = nota.data.split("T")[0];
+        }
+      }
       reset({
-        aluno: nota.aluno,
-        disciplina: nota.disciplina,
+        aluno: alunoId,
+        disciplina: disciplinaId,
         nota: nota.nota?.toString() || "",
-        data: nota.data || "",
+        data: dataStr,
         observacoes: nota.observacoes || "",
       });
     } else {
@@ -125,9 +138,33 @@ const NotasScreen = () => {
   };
 
   const onSubmit = async (data) => {
+    // Validação antes de enviar
+    if (!data.aluno || data.aluno === "") {
+      showCustomAlert("Erro", "Por favor, selecione um aluno");
+      return;
+    }
+    if (!data.disciplina || data.disciplina === "") {
+      showCustomAlert("Erro", "Por favor, selecione uma disciplina");
+      return;
+    }
+    if (!data.nota || isNaN(parseFloat(data.nota)) || parseFloat(data.nota) < 0 || parseFloat(data.nota) > 10) {
+      showCustomAlert("Erro", "Por favor, informe uma nota válida (0 a 10)");
+      return;
+    }
+    if (!data.data || data.data === "") {
+      showCustomAlert("Erro", "Por favor, informe uma data");
+      return;
+    }
+
     setLoading(true);
     try {
-      const notaData = { ...data, nota: parseFloat(data.nota) };
+      const notaData = { 
+        aluno: String(data.aluno),
+        disciplina: String(data.disciplina),
+        nota: parseFloat(data.nota),
+        data: data.data,
+        ...(data.observacoes && data.observacoes.trim() !== "" ? { observacoes: data.observacoes.trim() } : {}),
+      };
 
       if (editingNota) {
         await DataService.updateItem(
@@ -137,17 +174,16 @@ const NotasScreen = () => {
         );
         showCustomAlert("Sucesso", "Nota atualizada com sucesso!");
       } else {
-        await DataService.addItem(DataService.KEYS.NOTAS, {
-          ...notaData,
-          id: Date.now().toString(),
-        });
+        // Não criar ID manualmente, o backend gera UUID
+        await DataService.addItem(DataService.KEYS.NOTAS, notaData);
         showCustomAlert("Sucesso", "Nota criada com sucesso!");
       }
 
       await loadData();
       closeModal();
-    } catch {
-      showCustomAlert("Erro", "Não foi possível salvar a nota");
+    } catch (error) {
+      const errorMessage = error.message || "Não foi possível salvar a nota";
+      showCustomAlert("Erro", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -183,13 +219,15 @@ const NotasScreen = () => {
   };
 
   const getAlunoName = (alunoId) => {
-    const aluno = alunos.find((a) => a.id === alunoId);
-    return aluno ? aluno.nome : "Selecione um aluno";
+    if (!alunoId || !Array.isArray(alunos)) return "Aluno não encontrado";
+    const aluno = alunos.find((a) => a && (a.id === alunoId || String(a.id) === String(alunoId)));
+    return aluno ? aluno.nome : "Aluno não encontrado";
   };
 
   const getDisciplinaName = (disciplinaId) => {
-    const disciplina = disciplinas.find((d) => d.id === disciplinaId);
-    return disciplina ? disciplina.nome : "Selecione uma disciplina";
+    if (!disciplinaId || !Array.isArray(disciplinas)) return "Disciplina não encontrada";
+    const disciplina = disciplinas.find((d) => d && (d.id === disciplinaId || String(d.id) === String(disciplinaId)));
+    return disciplina ? disciplina.nome : "Disciplina não encontrada";
   };
 
   const getNotaColor = (nota) => {
@@ -204,17 +242,26 @@ const NotasScreen = () => {
     return date.toLocaleDateString("pt-BR");
   };
 
-  const filteredNotas = notas.filter((nota) => {
-    const alunoName = getAlunoName(nota.aluno).toLowerCase();
-    const disciplinaName = getDisciplinaName(nota.disciplina).toLowerCase();
-    const query = searchQuery.toLowerCase();
+  const filteredNotas = Array.isArray(notas) ? notas.filter((nota) => {
+    if (!nota) return false;
+    try {
+      // Normalizar: pode vir como objeto relacionado ou ID
+      const alunoId = nota.alunoId || (nota.aluno?.id || nota.aluno) || "";
+      const disciplinaId = nota.disciplinaId || (nota.disciplina?.id || nota.disciplina) || "";
+      const alunoName = getAlunoName(alunoId).toLowerCase();
+      const disciplinaName = getDisciplinaName(disciplinaId).toLowerCase();
+      const query = searchQuery.toLowerCase();
 
-    return (
-      alunoName.includes(query) ||
-      disciplinaName.includes(query) ||
-      (nota.nota?.toString() || "").includes(query)
-    );
-  });
+      return (
+        alunoName.includes(query) ||
+        disciplinaName.includes(query) ||
+        (nota.nota?.toString() || "").includes(query)
+      );
+    } catch (error) {
+      console.error("Erro ao filtrar nota:", error);
+      return false;
+    }
+  }) : [];
 
   return (
     <View style={styles.container}>
@@ -231,44 +278,58 @@ const NotasScreen = () => {
       ) : (
         <FlatList
           data={filteredNotas}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => (
-            <Card style={styles.card}>
-              <Card.Content>
-                <Text style={styles.title}>{getAlunoName(item.aluno)}</Text>
-                <Text style={styles.subtitle}>
-                  {getDisciplinaName(item.disciplina)}
-                </Text>
-                <View style={styles.chipRow}>
-                  <Chip
-                    style={[
-                      styles.notaChip,
-                      { backgroundColor: getNotaColor(item.nota) + "33" },
-                    ]} // 20% opacity
-                    textStyle={{
-                      color: getNotaColor(item.nota),
-                      fontWeight: "600",
-                    }}
-                  >
-                    {item.nota?.toFixed(1)}
-                  </Chip>
-                  <Chip style={styles.dataChip}>{formatDate(item.data)}</Chip>
-                </View>
-                {item.observacoes ? (
-                  <Text style={styles.observacoes}>
-                    <Text style={{ fontWeight: "600" }}>Observações: </Text>
-                    {item.observacoes}
-                  </Text>
-                ) : null}
-              </Card.Content>
-              <Card.Actions>
-                <Button onPress={() => openModal(item)}>Editar</Button>
-                <Button onPress={() => confirmDeleteNota(item.id)}>
-                  Excluir
-                </Button>
-              </Card.Actions>
-            </Card>
-          )}
+          keyExtractor={(item, index) => item?.id ? String(item.id) : `nota-${index}`}
+          renderItem={({ item }) => {
+            if (!item) return null;
+            try {
+              const alunoId = item.alunoId || item.aluno?.id || item.aluno;
+              const disciplinaId = item.disciplinaId || item.disciplina?.id || item.disciplina;
+              const notaValue = Number(item.nota) || 0;
+              
+              return (
+                <Card style={styles.card}>
+                  <Card.Content>
+                    <Text style={styles.title}>
+                      {getAlunoName(alunoId)}
+                    </Text>
+                    <Text style={styles.subtitle}>
+                      {getDisciplinaName(disciplinaId)}
+                    </Text>
+                    <View style={styles.chipRow}>
+                      <Chip
+                        style={[
+                          styles.notaChip,
+                          { backgroundColor: getNotaColor(notaValue) + "33" },
+                        ]}
+                        textStyle={{
+                          color: getNotaColor(notaValue),
+                          fontWeight: "600",
+                        }}
+                      >
+                        {notaValue.toFixed(1)}
+                      </Chip>
+                      <Chip style={styles.dataChip}>{formatDate(item.data)}</Chip>
+                    </View>
+                    {item.observacoes ? (
+                      <Text style={styles.observacoes}>
+                        <Text style={{ fontWeight: "600" }}>Observações: </Text>
+                        {item.observacoes}
+                      </Text>
+                    ) : null}
+                  </Card.Content>
+                  <Card.Actions>
+                    <Button onPress={() => openModal(item)}>Editar</Button>
+                    <Button onPress={() => confirmDeleteNota(item.id)}>
+                      Excluir
+                    </Button>
+                  </Card.Actions>
+                </Card>
+              );
+            } catch (error) {
+              console.error("Erro ao renderizar nota:", error);
+              return null;
+            }
+          }}
           ListEmptyComponent={
             <Text style={{ textAlign: "center", marginTop: 20 }}>
               Nenhuma nota encontrada.

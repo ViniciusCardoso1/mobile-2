@@ -60,12 +60,16 @@ const apiService = {
   create: async (resource, data) => {
     try {
       // Ajustar dados para o formato do backend
-      const formattedData = formatDataForBackend(resource, data);
+      const formattedData = formatDataForBackend(resource, data, false);
+      console.log(`[API] Criando ${resource}:`, formattedData);
       const response = await api.post(`/${resource}`, formattedData);
+      console.log(`[API] Resposta de criação ${resource}:`, response.data);
       return response.data;
     } catch (error) {
       const errorMessage = getErrorMessage(error);
-      console.error(`Erro ao criar ${resource}:`, errorMessage);
+      console.error(`[API] Erro ao criar ${resource}:`, errorMessage);
+      console.error(`[API] Dados enviados:`, data);
+      console.error(`[API] Erro completo:`, error.response?.data || error);
       const customError = new Error(errorMessage);
       customError.response = error.response;
       throw customError;
@@ -75,7 +79,7 @@ const apiService = {
   update: async (resource, id, data) => {
     try {
       // Ajustar dados para o formato do backend
-      const formattedData = formatDataForBackend(resource, data);
+      const formattedData = formatDataForBackend(resource, data, true);
       const response = await api.patch(`/${resource}/${id}`, formattedData);
       return response.data;
     } catch (error) {
@@ -116,38 +120,71 @@ const apiService = {
 };
 
 // Função para formatar dados conforme esperado pelo backend
-const formatDataForBackend = (resource, data) => {
+const formatDataForBackend = (resource, data, isUpdate = false) => {
   const formatted = { ...data };
   
   // Remover campos que não devem ser enviados
-  delete formatted.id;
+  if (!isUpdate) {
+    delete formatted.id;
+  }
   delete formatted.createdAt;
   delete formatted.updatedAt;
   
-  // Ajustar campos específicos por recurso
-  switch (resource) {
-    case "turmas":
-      if (formatted.professor) {
-        formatted.professor = formatted.professor;
-      }
-      break;
-    case "alunos":
-      if (formatted.turma) {
-        formatted.turma = formatted.turma;
-      }
-      break;
-    case "notas":
-      if (formatted.aluno) {
-        formatted.aluno = formatted.aluno;
-      }
-      if (formatted.disciplina) {
-        formatted.disciplina = formatted.disciplina;
-      }
-      if (formatted.data) {
-        formatted.data = formatted.data;
-      }
-      break;
+  // Remover campos de relacionamento que são objetos (manter apenas IDs)
+  if (formatted.aluno) {
+    if (typeof formatted.aluno === 'object') {
+      formatted.aluno = formatted.aluno.id || formatted.aluno;
+    }
+    // Remover se for string vazia (campo opcional)
+    if (formatted.aluno === "" || formatted.aluno === null || formatted.aluno === undefined) {
+      delete formatted.aluno;
+    }
   }
+  
+  if (formatted.disciplina) {
+    if (typeof formatted.disciplina === 'object') {
+      formatted.disciplina = formatted.disciplina.id || formatted.disciplina;
+    }
+    // Remover se for string vazia (campo opcional)
+    if (formatted.disciplina === "" || formatted.disciplina === null || formatted.disciplina === undefined) {
+      delete formatted.disciplina;
+    }
+  }
+  
+  if (formatted.professor) {
+    if (typeof formatted.professor === 'object') {
+      formatted.professor = formatted.professor.id || formatted.professor;
+    }
+    // Remover se for string vazia (campo opcional)
+    if (formatted.professor === "" || formatted.professor === null || formatted.professor === undefined) {
+      delete formatted.professor;
+    }
+  }
+  
+  if (formatted.turma) {
+    if (typeof formatted.turma === 'object') {
+      formatted.turma = formatted.turma.id || formatted.turma;
+    }
+    // Remover se for string vazia (campo opcional)
+    if (formatted.turma === "" || formatted.turma === null || formatted.turma === undefined) {
+      delete formatted.turma;
+    }
+  }
+  
+  // Remover campos vazios ou undefined
+  Object.keys(formatted).forEach(key => {
+    if (formatted[key] === "" || formatted[key] === null || formatted[key] === undefined) {
+      // Manter campos numéricos que podem ser 0
+      if (typeof formatted[key] === 'number' && formatted[key] === 0) {
+        return;
+      }
+      // Manter campos booleanos
+      if (typeof formatted[key] === 'boolean') {
+        return;
+      }
+      delete formatted[key];
+    }
+  });
   
   return formatted;
 };

@@ -12,7 +12,6 @@ import {
   ActivityIndicator,
 } from "react-native-paper";
 import { useForm, Controller } from "react-hook-form";
-import { MaskedTextInput } from "react-native-mask-text";
 import DataService from "../services/DataService";
 import AwesomeAlert from "react-native-awesome-alerts";
 
@@ -68,8 +67,8 @@ export default function ProfessoresScreen() {
     (professor) =>
       (professor.nome || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (professor.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (professor.especialidade || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (professor.departamento || "").toLowerCase().includes(searchQuery.toLowerCase())
+      (professor.codigo || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (professor.titulacao || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const openModal = (professor = null) => {
@@ -77,19 +76,19 @@ export default function ProfessoresScreen() {
       setEditingProfessor(professor);
       reset({
         nome: professor.nome || "",
+        codigo: professor.codigo || "",
         email: professor.email || "",
         telefone: professor.telefone || "",
-        especialidade: professor.especialidade || "",
-        departamento: professor.departamento || "",
+        especialidade: professor.titulacao || "",
       });
     } else {
       setEditingProfessor(null);
       reset({
         nome: "",
+        codigo: "",
         email: "",
         telefone: "",
         especialidade: "",
-        departamento: "",
       });
     }
     setVisible(true);
@@ -102,13 +101,34 @@ export default function ProfessoresScreen() {
   };
 
   const onSubmit = async (data) => {
-    if (!data.email.includes("@")) {
+    // Validação antes de enviar
+    if (!data.nome || data.nome.trim() === "") {
+      showCustomAlert("Erro", "Por favor, informe o nome do professor");
+      return;
+    }
+    if (!data.codigo || data.codigo.trim() === "") {
+      showCustomAlert("Erro", "Por favor, informe o código do professor");
+      return;
+    }
+    if (!data.email || !data.email.includes("@")) {
       showCustomAlert("Erro", "Por favor, insira um email válido contendo '@'.");
       return;
     }
+    if (!data.especialidade || data.especialidade.trim() === "") {
+      showCustomAlert("Erro", "Por favor, informe a titulação do professor");
+      return;
+    }
+    
     setLoading(true);
     try {
-      const professorData = { ...data, telefone: data.telefone?.replace(/\D/g, "") || "" };
+      // Ajustar campos para o formato do backend
+      const professorData = {
+        nome: data.nome.trim(),
+        codigo: data.codigo.trim().toUpperCase(),
+        titulacao: data.especialidade.trim(),
+        email: data.email.trim(),
+        ...(data.telefone && data.telefone.trim() !== "" ? { telefone: data.telefone.replace(/\D/g, "") } : {}),
+      };
       if (editingProfessor) {
         await DataService.updateItem(
           DataService.KEYS.PROFESSORES,
@@ -117,14 +137,15 @@ export default function ProfessoresScreen() {
         );
         showCustomAlert("Sucesso", "Professor atualizado com sucesso!");
       } else {
-        const newProfessor = { ...professorData, id: Date.now().toString() };
-        await DataService.addItem(DataService.KEYS.PROFESSORES, newProfessor);
+        // Não criar ID manualmente, o backend gera UUID
+        await DataService.addItem(DataService.KEYS.PROFESSORES, professorData);
         showCustomAlert("Sucesso", "Professor criado com sucesso!");
       }
       await loadProfessores();
       closeModal();
-    } catch {
-      showCustomAlert("Erro", "Não foi possível salvar o professor");
+    } catch (error) {
+      const errorMessage = error.message || "Não foi possível salvar o professor";
+      showCustomAlert("Erro", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -163,10 +184,10 @@ export default function ProfessoresScreen() {
             <Card style={styles.card}>
               <Card.Content>
                 <Title>{item.nome}</Title>
+                <Paragraph>Código: {item.codigo}</Paragraph>
                 <Paragraph>Email: {item.email}</Paragraph>
-                <Paragraph>Telefone: {item.telefone}</Paragraph>
-                <Paragraph>Especialidade: {item.especialidade}</Paragraph>
-                <Paragraph>Departamento: {item.departamento}</Paragraph>
+                {item.telefone && <Paragraph>Telefone: {item.telefone}</Paragraph>}
+                <Paragraph>Titulação: {item.titulacao}</Paragraph>
               </Card.Content>
               <Card.Actions>
                 <Button onPress={() => openModal(item)}>Editar</Button>
@@ -201,6 +222,21 @@ export default function ProfessoresScreen() {
           />
           <Controller
             control={control}
+            name="codigo"
+            rules={{ required: true }}
+            render={({ field: { onChange, value } }) => (
+              <TextInput
+                label="Código"
+                value={value}
+                onChangeText={onChange}
+                style={styles.input}
+                mode="outlined"
+                autoCapitalize="characters"
+              />
+            )}
+          />
+          <Controller
+            control={control}
             name="email"
             rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
@@ -220,20 +256,13 @@ export default function ProfessoresScreen() {
             name="telefone"
             render={({ field: { onChange, value } }) => (
               <TextInput
-                label="Telefone"
+                label="Telefone (opcional)"
                 value={value}
                 onChangeText={onChange}
                 style={styles.input}
-                keyboardType="phone-pad"
                 mode="outlined"
-                render={(props) => (
-                  <MaskedTextInput
-                    {...props}
-                    mask="(99) 99999-9999"
-                    onChangeText={onChange}
-                    value={value}
-                  />
-                )}
+                keyboardType="phone-pad"
+                placeholder="(00) 00000-0000"
               />
             )}
           />
@@ -243,25 +272,12 @@ export default function ProfessoresScreen() {
             rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
               <TextInput
-                label="Especialidade"
+                label="Titulação"
                 value={value}
                 onChangeText={onChange}
                 style={styles.input}
                 mode="outlined"
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="departamento"
-            rules={{ required: true }}
-            render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Departamento"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-                mode="outlined"
+                placeholder="Ex: Doutor, Mestre, Especialista"
               />
             )}
           />

@@ -25,6 +25,9 @@ export class Professor {
   @Column({ length: 255, unique: true })
   email: string;
 
+  @Column({ length: 20, nullable: true })
+  telefone: string;
+
   @OneToMany(() => Turma, (turma) => turma.professor)
   turmas: Turma[];
 

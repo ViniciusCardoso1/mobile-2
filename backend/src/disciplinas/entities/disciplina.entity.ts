@@ -25,6 +25,9 @@ export class Disciplina {
   @Column({ length: 255 })
   departamento: string;
 
+  @Column({ type: 'text', nullable: true })
+  ementa: string;
+
   @OneToMany(() => Nota, (nota) => nota.disciplina)
   notas: Nota[];
 

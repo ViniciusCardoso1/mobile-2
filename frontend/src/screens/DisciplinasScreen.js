@@ -67,7 +67,7 @@ export default function DisciplinasScreen() {
     (disciplina) =>
       (disciplina.nome || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (disciplina.codigo || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (disciplina.ementa || "").toLowerCase().includes(searchQuery.toLowerCase())
+      (disciplina.departamento || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const openModal = (disciplina = null) => {
@@ -76,9 +76,9 @@ export default function DisciplinasScreen() {
       reset({
         nome: disciplina.nome,
         codigo: disciplina.codigo,
-        cargaHoraria: disciplina.cargaHoraria?.toString() || "",
-        ementa: disciplina.ementa,
-        preRequisitos: disciplina.preRequisitos || "",
+        cargaHoraria: disciplina.carga_horaria?.toString() || disciplina.cargaHoraria?.toString() || "",
+        departamento: disciplina.departamento || "",
+        ementa: disciplina.ementa || "",
       });
     } else {
       setEditingDisciplina(null);
@@ -86,8 +86,8 @@ export default function DisciplinasScreen() {
         nome: "",
         codigo: "",
         cargaHoraria: "",
+        departamento: "",
         ementa: "",
-        preRequisitos: "",
       });
     }
     setVisible(true);
@@ -100,9 +100,34 @@ export default function DisciplinasScreen() {
   };
 
   const onSubmit = async (data) => {
+    // Validação antes de enviar
+    if (!data.nome || data.nome.trim() === "") {
+      showCustomAlert("Erro", "Por favor, informe o nome da disciplina");
+      return;
+    }
+    if (!data.codigo || data.codigo.trim() === "") {
+      showCustomAlert("Erro", "Por favor, informe o código da disciplina");
+      return;
+    }
+    if (!data.cargaHoraria || isNaN(parseInt(data.cargaHoraria)) || parseInt(data.cargaHoraria) < 20) {
+      showCustomAlert("Erro", "Por favor, informe uma carga horária válida (mínimo 20 horas)");
+      return;
+    }
+    if (!data.departamento || data.departamento.trim() === "") {
+      showCustomAlert("Erro", "Por favor, informe o departamento");
+      return;
+    }
+    
     setLoading(true);
     try {
-      const disciplinaData = { ...data, cargaHoraria: parseInt(data.cargaHoraria) || 0 };
+      // Ajustar campos para o formato do backend
+      const disciplinaData = {
+        nome: data.nome.trim(),
+        codigo: data.codigo.trim().toUpperCase(),
+        carga_horaria: parseInt(data.cargaHoraria),
+        departamento: data.departamento.trim(),
+        ...(data.ementa && data.ementa.trim() !== "" ? { ementa: data.ementa.trim() } : {}),
+      };
       if (editingDisciplina) {
         await DataService.updateItem(DataService.KEYS.DISCIPLINAS, editingDisciplina.id, disciplinaData);
         showCustomAlert("Sucesso", "Disciplina atualizada com sucesso!");
@@ -112,8 +137,9 @@ export default function DisciplinasScreen() {
       }
       await loadDisciplinas();
       closeModal();
-    } catch {
-      showCustomAlert("Erro", "Não foi possível salvar a disciplina");
+    } catch (error) {
+      const errorMessage = error.message || "Não foi possível salvar a disciplina";
+      showCustomAlert("Erro", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -153,9 +179,9 @@ export default function DisciplinasScreen() {
               <Card.Content>
                 <Title>{item.nome}</Title>
                 <Paragraph>Código: {item.codigo}</Paragraph>
-                <Paragraph>Carga Horária: {item.cargaHoraria}h</Paragraph>
-                <Paragraph>Ementa: {item.ementa}</Paragraph>
-                {item.preRequisitos && <Paragraph>Pré-requisitos: {item.preRequisitos}</Paragraph>}
+                <Paragraph>Carga Horária: {item.carga_horaria || item.cargaHoraria}h</Paragraph>
+                <Paragraph>Departamento: {item.departamento}</Paragraph>
+                {item.ementa && <Paragraph>Ementa: {item.ementa}</Paragraph>}
               </Card.Content>
               <Card.Actions>
                 <Button onPress={() => openModal(item)}>Editar</Button>
@@ -221,32 +247,31 @@ export default function DisciplinasScreen() {
           />
           <Controller
             control={control}
-            name="ementa"
+            name="departamento"
             rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
               <TextInput
-                label="Ementa"
+                label="Departamento"
+                value={value}
+                onChangeText={onChange}
+                style={styles.input}
+                mode="outlined"
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="ementa"
+            render={({ field: { onChange, value } }) => (
+              <TextInput
+                label="Ementa (opcional)"
                 value={value}
                 onChangeText={onChange}
                 style={styles.input}
                 mode="outlined"
                 multiline
                 numberOfLines={4}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="preRequisitos"
-            render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Pré-requisitos (opcional)"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-                mode="outlined"
-                multiline
-                numberOfLines={2}
+                placeholder="Descreva o conteúdo da disciplina..."
               />
             )}
           />

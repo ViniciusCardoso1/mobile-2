@@ -56,7 +56,7 @@ export default function TurmasScreen() {
     try {
       await DataService.initializeSampleData();
       const data = await DataService.loadData(DataService.KEYS.TURMAS);
-      setTurmas(data || []);
+      setTurmas(Array.isArray(data) ? data : []);
     } catch (error) {
       showCustomAlert("Erro", "Não foi possível carregar as turmas");
       setTurmas([]);
@@ -68,7 +68,7 @@ export default function TurmasScreen() {
   const loadProfessores = async () => {
     try {
       const data = await DataService.loadData(DataService.KEYS.PROFESSORES);
-      setProfessores(data || []);
+      setProfessores(Array.isArray(data) ? data : []);
     } catch (error) {
       setProfessores([]);
     }
@@ -79,24 +79,42 @@ export default function TurmasScreen() {
     loadProfessores();
   }, []);
 
-  const filteredTurmas = turmas.filter(
-    (turma) =>
-      (turma.nome || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (turma.codigo || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (turma.periodo || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      getProfessorName(turma.professor)
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase())
-  );
+  const getProfessorName = (professorId) => {
+    if (!professorId || !Array.isArray(professores)) return "Nenhum professor";
+    const professor = professores.find((p) => p && (p.id === professorId || String(p.id) === String(professorId)));
+    return professor ? professor.nome : "Nenhum professor";
+  };
+
+  const filteredTurmas = Array.isArray(turmas) ? turmas.filter(
+    (turma) => {
+      if (!turma) return false;
+      try {
+        const professorId = turma.professorId || turma.professor?.id || turma.professor;
+        const professorName = getProfessorName(professorId);
+        return (
+          (turma.nome || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (turma.codigo || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (turma.periodo || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (professorName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (turma.capacidade?.toString() || "").includes(searchQuery)
+        );
+      } catch (error) {
+        console.error("Erro ao filtrar turma:", error);
+        return false;
+      }
+    }
+  ) : [];
 
   const openModal = (turma = null) => {
     if (turma) {
       setEditingTurma(turma);
+      // Normalizar professor ID
+      const professorId = turma.professorId || turma.professor?.id || turma.professor || "";
       reset({
         nome: turma.nome,
         codigo: turma.codigo,
         periodo: turma.periodo,
-        professor: turma.professor,
+        professor: professorId,
         capacidade: turma.capacidade?.toString() || "",
       });
     } else {
@@ -120,9 +138,34 @@ export default function TurmasScreen() {
   };
 
   const onSubmit = async (data) => {
+    // Validação antes de enviar
+    if (!data.nome || data.nome.trim() === "") {
+      showCustomAlert("Erro", "Por favor, informe o nome da turma");
+      return;
+    }
+    if (!data.codigo || data.codigo.trim() === "") {
+      showCustomAlert("Erro", "Por favor, informe o código da turma");
+      return;
+    }
+    if (!data.periodo || data.periodo.trim() === "") {
+      showCustomAlert("Erro", "Por favor, informe o período");
+      return;
+    }
+    if (!data.capacidade || isNaN(parseInt(data.capacidade)) || parseInt(data.capacidade) < 5) {
+      showCustomAlert("Erro", "Por favor, informe uma capacidade válida (mínimo 5 alunos)");
+      return;
+    }
+    
     setLoading(true);
     try {
-      const turmaData = { ...data, capacidade: parseInt(data.capacidade) || 0 };
+      const turmaData = { 
+        nome: data.nome.trim(),
+        codigo: data.codigo.trim().toUpperCase(),
+        periodo: data.periodo.trim(),
+        capacidade: parseInt(data.capacidade),
+        // Só incluir professor se foi selecionado
+        ...(data.professor && data.professor !== "" ? { professor: data.professor } : {}),
+      };
       if (editingTurma) {
         await DataService.updateItem(DataService.KEYS.TURMAS, editingTurma.id, turmaData);
         showCustomAlert("Sucesso", "Turma atualizada com sucesso!");
@@ -133,7 +176,8 @@ export default function TurmasScreen() {
       await loadTurmas();
       closeModal();
     } catch (error) {
-      showCustomAlert("Erro", "Não foi possível salvar a turma");
+      const errorMessage = error.message || "Não foi possível salvar a turma";
+      showCustomAlert("Erro", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -152,11 +196,6 @@ export default function TurmasScreen() {
     });
   };
 
-  const getProfessorName = (professorId) => {
-    const professor = professores.find((p) => p.id === professorId);
-    return professor ? professor.nome : "Selecione um professor";
-  };
-
   const selectedProfessorId = watch("professor");
 
   return (
@@ -173,22 +212,31 @@ export default function TurmasScreen() {
       ) : (
         <FlatList
           data={filteredTurmas}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => (
-            <Card style={styles.card}>
-              <Card.Content>
-                <Title>{item.nome}</Title>
-                <Paragraph>Código: {item.codigo}</Paragraph>
-                <Paragraph>Período: {item.periodo}</Paragraph>
-                <Paragraph>Professor: {getProfessorName(item.professor)}</Paragraph>
-                <Paragraph>Capacidade: {item.capacidade} alunos</Paragraph>
-              </Card.Content>
-              <Card.Actions>
-                <Button onPress={() => openModal(item)}>Editar</Button>
-                <Button onPress={() => confirmDeleteTurma(item.id)}>Excluir</Button>
-              </Card.Actions>
-            </Card>
-          )}
+          keyExtractor={(item, index) => item?.id ? String(item.id) : `turma-${index}`}
+          renderItem={({ item }) => {
+            if (!item) return null;
+            try {
+              const professorId = item.professorId || item.professor?.id || item.professor;
+              return (
+                <Card style={styles.card}>
+                  <Card.Content>
+                    <Title>{item.nome || "Sem nome"}</Title>
+                    <Paragraph>Código: {item.codigo || "N/A"}</Paragraph>
+                    <Paragraph>Período: {item.periodo || "N/A"}</Paragraph>
+                    <Paragraph>Professor: {getProfessorName(professorId)}</Paragraph>
+                    <Paragraph>Capacidade: {item.capacidade || 0} alunos</Paragraph>
+                  </Card.Content>
+                  <Card.Actions>
+                    <Button onPress={() => openModal(item)}>Editar</Button>
+                    <Button onPress={() => confirmDeleteTurma(item.id)}>Excluir</Button>
+                  </Card.Actions>
+                </Card>
+              );
+            } catch (error) {
+              console.error("Erro ao renderizar turma:", error);
+              return null;
+            }
+          }}
           ListEmptyComponent={
             <Paragraph style={{ textAlign: "center", marginTop: 20 }}>
               Nenhuma turma encontrada.

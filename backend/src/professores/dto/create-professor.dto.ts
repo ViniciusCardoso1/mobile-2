@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsNotEmpty, Length, Matches } from 'class-validator';
+import { IsString, IsEmail, IsNotEmpty, IsOptional, Length, Matches } from 'class-validator';
 
 export class CreateProfessorDto {
   @IsString()
@@ -19,5 +19,10 @@ export class CreateProfessorDto {
   @IsEmail({}, { message: 'Email inválido' })
   @IsNotEmpty({ message: 'Email é obrigatório' })
   email: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{10,11}$/, { message: 'Telefone deve conter 10 ou 11 dígitos' })
+  telefone?: string;
 }
 
