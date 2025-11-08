@@ -1,18 +1,22 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createStackNavigator } from "@react-navigation/stack";
 import { Provider as PaperProvider, DefaultTheme } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { MaterialIcons } from "@expo/vector-icons";
+import { ActivityIndicator, View } from "react-native";
 
 // Importação das telas
+import LoginScreen from "./src/screens/LoginScreen";
 import DashboardScreen from "./src/screens/DashboardScreen";
 import TurmasScreen from "./src/screens/TurmasScreen";
 import AlunosScreen from "./src/screens/AlunosScreen";
 import ProfessoresScreen from "./src/screens/ProfessoresScreen";
 import DisciplinasScreen from "./src/screens/DisciplinasScreen";
 import NotasScreen from "./src/screens/NotasScreen";
+import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
 
 // Tema personalizado herdando do DefaultTheme
 const theme = {
@@ -34,14 +38,13 @@ const theme = {
 };
 
 const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
 
-export default function App() {
+function TabNavigator() {
+  const { logout } = useAuth();
+  
   return (
-    <SafeAreaProvider>
-      <PaperProvider theme={theme}>
-        <NavigationContainer>
-          <StatusBar style="dark" backgroundColor={theme.colors.background} />
-          <Tab.Navigator
+    <Tab.Navigator
             screenOptions={({ route }) => ({
               tabBarIcon: ({ color, size }) => {
                 let iconName;
@@ -101,9 +104,10 @@ export default function App() {
           >
             <Tab.Screen
               name="Dashboard"
-              component={DashboardScreen}
-              options={{ title: "Dashboard" }}
-            />
+              options={{ title: "Início" }}
+            >
+              {(props) => <DashboardScreen {...props} />}
+            </Tab.Screen>
             <Tab.Screen
               name="Turmas"
               component={TurmasScreen}
@@ -130,7 +134,45 @@ export default function App() {
               options={{ title: "Notas" }}
             />
           </Tab.Navigator>
-        </NavigationContainer>
+  );
+}
+
+function AppContent() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#6366f1" />
+      </View>
+    );
+  }
+
+  return (
+    <NavigationContainer>
+      <StatusBar style="dark" backgroundColor="#f8fafc" />
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {!isAuthenticated ? (
+          <Stack.Screen name="Login">
+            {(props) => <LoginScreen {...props} />}
+          </Stack.Screen>
+        ) : (
+          <Stack.Screen name="Main">
+            {() => <TabNavigator />}
+          </Stack.Screen>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <PaperProvider theme={theme}>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
       </PaperProvider>
     </SafeAreaProvider>
   );

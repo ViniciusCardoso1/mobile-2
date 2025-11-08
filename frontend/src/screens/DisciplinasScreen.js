@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, FlatList } from "react-native";
+import { View, StyleSheet, FlatList, Text } from "react-native";
 import {
   Card,
   Title,
@@ -25,7 +25,7 @@ export default function DisciplinasScreen() {
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
   const [alertConfirmCallback, setAlertConfirmCallback] = useState(null);
-  const { control, handleSubmit, reset } = useForm();
+  const { control, handleSubmit, reset, setError, formState: { errors } } = useForm();
 
   const showCustomAlert = (title, message, onConfirm = null) => {
     setAlertTitle(title);
@@ -100,23 +100,13 @@ export default function DisciplinasScreen() {
   };
 
   const onSubmit = async (data) => {
-    // Validação antes de enviar
-    if (!data.nome || data.nome.trim() === "") {
-      showCustomAlert("Erro", "Por favor, informe o nome da disciplina");
-      return;
-    }
-    if (!data.codigo || data.codigo.trim() === "") {
-      showCustomAlert("Erro", "Por favor, informe o código da disciplina");
-      return;
-    }
-    if (!data.cargaHoraria || isNaN(parseInt(data.cargaHoraria)) || parseInt(data.cargaHoraria) < 20) {
-      showCustomAlert("Erro", "Por favor, informe uma carga horária válida (mínimo 20 horas)");
-      return;
-    }
-    if (!data.departamento || data.departamento.trim() === "") {
-      showCustomAlert("Erro", "Por favor, informe o departamento");
-      return;
-    }
+    // Limpar erros anteriores do backend
+    const currentErrors = Object.keys(errors);
+    currentErrors.forEach(key => {
+      if (errors[key]?.type === 'manual') {
+        setError(key, { type: 'manual', message: '' });
+      }
+    });
     
     setLoading(true);
     try {
@@ -138,8 +128,38 @@ export default function DisciplinasScreen() {
       await loadDisciplinas();
       closeModal();
     } catch (error) {
-      const errorMessage = error.message || "Não foi possível salvar a disciplina";
-      showCustomAlert("Erro", errorMessage);
+      // Se houver erros de validação do backend, mapear para os campos
+      if (error.validationErrors) {
+        let hasFieldErrors = false;
+        Object.keys(error.validationErrors).forEach((field) => {
+          if (field !== '_general') {
+            hasFieldErrors = true;
+            const fieldErrors = error.validationErrors[field];
+            // Mapear campos do backend para campos do frontend
+            const fieldMapping = {
+              'carga_horaria': 'cargaHoraria',
+              'cargahoraria': 'cargaHoraria',
+            };
+            const frontendField = fieldMapping[field] || field;
+            const errorMessage = fieldErrors[0] || error.message;
+            setError(frontendField, { 
+              type: 'manual', 
+              message: errorMessage 
+            });
+          }
+        });
+        // Se houver erros gerais, mostrar no alert
+        if (error.validationErrors._general && error.validationErrors._general.length > 0) {
+          showCustomAlert("Erro", error.validationErrors._general[0]);
+        } else if (!hasFieldErrors) {
+          // Se não houver erros de campo específicos, mostrar mensagem geral
+          const errorMessage = error.message || "Não foi possível salvar a disciplina";
+          showCustomAlert("Erro", errorMessage);
+        }
+      } else {
+        const errorMessage = error.message || "Não foi possível salvar a disciplina";
+        showCustomAlert("Erro", errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -205,58 +225,131 @@ export default function DisciplinasScreen() {
           <Controller
             control={control}
             name="nome"
-            rules={{ required: true }}
+            rules={{ 
+              required: "Nome é obrigatório",
+              minLength: {
+                value: 3,
+                message: "Nome deve ter entre 3 e 255 caracteres"
+              },
+              maxLength: {
+                value: 255,
+                message: "Nome deve ter entre 3 e 255 caracteres"
+              }
+            }}
             render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Nome da Disciplina"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-                mode="outlined"
-              />
+              <View>
+                <TextInput
+                  label="Nome da Disciplina"
+                  value={value}
+                  onChangeText={onChange}
+                  style={styles.input}
+                  mode="outlined"
+                  error={!!errors.nome}
+                />
+                {errors.nome && (
+                  <Text style={styles.errorText}>{errors.nome.message}</Text>
+                )}
+              </View>
             )}
           />
           <Controller
             control={control}
             name="codigo"
-            rules={{ required: true }}
+            rules={{ 
+              required: "Código é obrigatório",
+              minLength: {
+                value: 3,
+                message: "Código deve ter entre 3 e 50 caracteres"
+              },
+              maxLength: {
+                value: 50,
+                message: "Código deve ter entre 3 e 50 caracteres"
+              },
+              pattern: {
+                value: /^[A-Z0-9]+$/,
+                message: "Código deve conter apenas letras maiúsculas e números"
+              }
+            }}
             render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Código da Disciplina"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-                mode="outlined"
-              />
+              <View>
+                <TextInput
+                  label="Código da Disciplina"
+                  value={value}
+                  onChangeText={(text) => onChange(text.toUpperCase())}
+                  style={styles.input}
+                  mode="outlined"
+                  error={!!errors.codigo}
+                />
+                {errors.codigo && (
+                  <Text style={styles.errorText}>{errors.codigo.message}</Text>
+                )}
+              </View>
             )}
           />
           <Controller
             control={control}
             name="cargaHoraria"
-            rules={{ required: true }}
+            rules={{ 
+              required: "Carga horária é obrigatória",
+              validate: (value) => {
+                const num = parseInt(value);
+                if (isNaN(num)) {
+                  return "Carga horária deve ser um número inteiro";
+                }
+                if (num < 20) {
+                  return "Carga horária mínima é 20 horas";
+                }
+                if (num > 200) {
+                  return "Carga horária máxima é 200 horas";
+                }
+                return true;
+              }
+            }}
             render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Carga Horária (horas)"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-                mode="outlined"
-                keyboardType="numeric"
-              />
+              <View>
+                <TextInput
+                  label="Carga Horária (horas)"
+                  value={value}
+                  onChangeText={onChange}
+                  style={styles.input}
+                  mode="outlined"
+                  keyboardType="numeric"
+                  error={!!errors.cargaHoraria}
+                />
+                {errors.cargaHoraria && (
+                  <Text style={styles.errorText}>{errors.cargaHoraria.message}</Text>
+                )}
+              </View>
             )}
           />
           <Controller
             control={control}
             name="departamento"
-            rules={{ required: true }}
+            rules={{ 
+              required: "Departamento é obrigatório",
+              minLength: {
+                value: 3,
+                message: "Departamento deve ter entre 3 e 255 caracteres"
+              },
+              maxLength: {
+                value: 255,
+                message: "Departamento deve ter entre 3 e 255 caracteres"
+              }
+            }}
             render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Departamento"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-                mode="outlined"
-              />
+              <View>
+                <TextInput
+                  label="Departamento"
+                  value={value}
+                  onChangeText={onChange}
+                  style={styles.input}
+                  mode="outlined"
+                  error={!!errors.departamento}
+                />
+                {errors.departamento && (
+                  <Text style={styles.errorText}>{errors.departamento.message}</Text>
+                )}
+              </View>
             )}
           />
           <Controller
@@ -304,4 +397,11 @@ const styles = StyleSheet.create({
   modal: { backgroundColor: "white", padding: 20, margin: 20, borderRadius: 8 },
   input: { marginBottom: 10 },
   centeredIndicator: { marginTop: 20, alignSelf: "center" },
+  errorText: {
+    color: "red",
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 8,
+    marginLeft: 12,
+  },
 });

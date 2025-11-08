@@ -1,4 +1,5 @@
 import axios from "axios";
+import AuthService from "./AuthService";
 
 // URL do backend NestJS
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
@@ -9,6 +10,20 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+// Interceptor para adicionar token nas requisições
+api.interceptors.request.use(
+  async (config) => {
+    const token = await AuthService.getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 // Helper para extrair mensagem de erro do backend
 const getErrorMessage = (error) => {
@@ -25,6 +40,105 @@ const getErrorMessage = (error) => {
     return "Não foi possível conectar ao servidor. Verifique se o backend está rodando.";
   }
   return error.message || "Erro desconhecido";
+};
+
+// Helper para extrair erros de validação por campo do backend
+const getValidationErrors = (error) => {
+  const errors = {};
+  if (error.response?.data?.message) {
+    const messages = error.response.data.message;
+    
+    // Se for string única, tratar como erro geral ou tentar extrair campo
+    if (typeof messages === 'string') {
+      // Verificar se a mensagem menciona algum campo conhecido
+      const fieldMappings = {
+        'carga horária': 'cargaHoraria',
+        'carga horaria': 'cargaHoraria',
+        'carga_horaria': 'cargaHoraria',
+        'nome': 'nome',
+        'codigo': 'codigo',
+        'departamento': 'departamento',
+        'periodo': 'periodo',
+        'capacidade': 'capacidade',
+      };
+      
+      for (const [key, value] of Object.entries(fieldMappings)) {
+        if (messages.toLowerCase().includes(key.toLowerCase())) {
+          if (!errors[value]) {
+            errors[value] = [];
+          }
+          errors[value].push(messages);
+          return errors;
+        }
+      }
+      
+      // Se não encontrou campo específico, adicionar como erro geral
+      errors._general = [messages];
+      return errors;
+    }
+    
+    if (Array.isArray(messages)) {
+      // NestJS retorna array de mensagens no formato: 
+      // ["nome must be longer than or equal to 3 characters", "Código deve ter entre 1 e 50 caracteres", ...]
+      messages.forEach((msg) => {
+        // Mapear campos conhecidos (português e inglês)
+        const fieldMappings = {
+          'nome': 'nome',
+          'name': 'nome',
+          'codigo': 'codigo',
+          'code': 'codigo',
+          'periodo': 'periodo',
+          'period': 'periodo',
+          'capacidade': 'capacidade',
+          'capacity': 'capacidade',
+          'professor': 'professor',
+          'teacher': 'professor',
+          'carga_horaria': 'cargaHoraria',
+          'cargahoraria': 'cargaHoraria',
+          'carga horária': 'cargaHoraria',
+          'carga horaria': 'cargaHoraria',
+          'departamento': 'departamento',
+          'department': 'departamento',
+        };
+        
+        // Tentar extrair o nome do campo da mensagem
+        let fieldName = null;
+        
+        // Verificar se a mensagem contém algum campo conhecido (buscar por palavra completa)
+        for (const [key, value] of Object.entries(fieldMappings)) {
+          // Buscar por palavra completa para evitar falsos positivos
+          const regex = new RegExp(`\\b${key}\\b`, 'i');
+          if (regex.test(msg)) {
+            fieldName = value;
+            break;
+          }
+        }
+        
+        // Se não encontrou, tentar extrair da primeira palavra
+        if (!fieldName) {
+          const fieldMatch = msg.match(/(\w+)\s/);
+          if (fieldMatch) {
+            const extractedField = fieldMatch[1].toLowerCase();
+            fieldName = fieldMappings[extractedField] || extractedField;
+          }
+        }
+        
+        if (fieldName) {
+          if (!errors[fieldName]) {
+            errors[fieldName] = [];
+          }
+          errors[fieldName].push(msg);
+        } else {
+          // Se não conseguir extrair o campo, adicionar como erro geral
+          if (!errors._general) {
+            errors._general = [];
+          }
+          errors._general.push(msg);
+        }
+      });
+    }
+  }
+  return errors;
 };
 
 const apiService = {
@@ -67,11 +181,13 @@ const apiService = {
       return response.data;
     } catch (error) {
       const errorMessage = getErrorMessage(error);
+      const validationErrors = getValidationErrors(error);
       console.error(`[API] Erro ao criar ${resource}:`, errorMessage);
       console.error(`[API] Dados enviados:`, data);
       console.error(`[API] Erro completo:`, error.response?.data || error);
       const customError = new Error(errorMessage);
       customError.response = error.response;
+      customError.validationErrors = validationErrors;
       throw customError;
     }
   },
@@ -84,9 +200,11 @@ const apiService = {
       return response.data;
     } catch (error) {
       const errorMessage = getErrorMessage(error);
+      const validationErrors = getValidationErrors(error);
       console.error(`Erro ao atualizar ${resource} com id ${id}:`, errorMessage);
       const customError = new Error(errorMessage);
       customError.response = error.response;
+      customError.validationErrors = validationErrors;
       throw customError;
     }
   },

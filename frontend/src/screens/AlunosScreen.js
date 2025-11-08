@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, FlatList } from "react-native";
+import { View, StyleSheet, FlatList, Text } from "react-native";
 import {
   Card,
   Title,
@@ -17,6 +17,30 @@ import { useForm, Controller } from "react-hook-form";
 import DataService from "../services/DataService";
 import AwesomeAlert from "react-native-awesome-alerts";
 
+// Função para formatar telefone com máscara
+const formatPhoneNumber = (text) => {
+  // Remove tudo que não é dígito
+  const numbers = text.replace(/\D/g, "");
+  
+  // Limita a 11 dígitos
+  const limitedNumbers = numbers.slice(0, 11);
+  
+  // Aplica a máscara baseado no tamanho
+  if (limitedNumbers.length === 0) {
+    return "";
+  } else if (limitedNumbers.length <= 2) {
+    return `(${limitedNumbers}`;
+  } else if (limitedNumbers.length <= 6) {
+    return `(${limitedNumbers.slice(0, 2)}) ${limitedNumbers.slice(2)}`;
+  } else if (limitedNumbers.length <= 10) {
+    // Telefone fixo: (00) 0000-0000
+    return `(${limitedNumbers.slice(0, 2)}) ${limitedNumbers.slice(2, 6)}-${limitedNumbers.slice(6)}`;
+  } else {
+    // Celular: (00) 00000-0000
+    return `(${limitedNumbers.slice(0, 2)}) ${limitedNumbers.slice(2, 7)}-${limitedNumbers.slice(7)}`;
+  }
+};
+
 export default function AlunosScreen() {
   const theme = useTheme();
   const [alunos, setAlunos] = useState([]);
@@ -31,7 +55,7 @@ export default function AlunosScreen() {
   const [alertMessage, setAlertMessage] = useState("");
   const [alertConfirmCallback, setAlertConfirmCallback] = useState(null);
 
-  const { control, handleSubmit, reset, setValue, watch } = useForm({
+  const { control, handleSubmit, reset, setValue, watch, setError, formState: { errors } } = useForm({
     defaultValues: { nome: "", matricula: "", email: "", telefone: "", turma: "" },
   });
 
@@ -106,11 +130,13 @@ export default function AlunosScreen() {
       setEditingAluno(aluno);
       // Normalizar turma ID
       const turmaId = aluno.turmaId || aluno.turma?.id || aluno.turma || "";
+      // Formatar telefone se existir (pode vir sem máscara do backend)
+      const telefoneFormatado = aluno.telefone ? formatPhoneNumber(aluno.telefone) : "";
       reset({
         nome: aluno.nome || "",
         matricula: aluno.matricula || "",
         email: aluno.email || "",
-        telefone: aluno.telefone || "",
+        telefone: telefoneFormatado,
         turma: turmaId,
       });
     } else {
@@ -128,23 +154,13 @@ export default function AlunosScreen() {
   };
 
   const onSubmit = async (data) => {
-    // Validação antes de enviar
-    if (!data.nome || data.nome.trim() === "") {
-      showCustomAlert("Erro", "Por favor, informe o nome do aluno");
-      return;
-    }
-    if (!data.matricula || data.matricula.trim() === "") {
-      showCustomAlert("Erro", "Por favor, informe a matrícula do aluno");
-      return;
-    }
-    if (!data.email || !data.email.includes("@")) {
-      showCustomAlert("Erro", "Por favor, insira um email válido contendo '@'.");
-      return;
-    }
-    if (!data.telefone || data.telefone.replace(/\D/g, "").length < 10) {
-      showCustomAlert("Erro", "Por favor, informe um telefone válido");
-      return;
-    }
+    // Limpar erros anteriores do backend
+    const currentErrors = Object.keys(errors);
+    currentErrors.forEach(key => {
+      if (errors[key]?.type === 'manual') {
+        setError(key, { type: 'manual', message: '' });
+      }
+    });
 
     setLoading(true);
     try {
@@ -167,8 +183,27 @@ export default function AlunosScreen() {
       await loadAlunos();
       closeModal();
     } catch (error) {
-      const errorMessage = error.message || "Não foi possível salvar o aluno";
-      showCustomAlert("Erro", errorMessage);
+      // Se houver erros de validação do backend, mapear para os campos
+      if (error.validationErrors) {
+        Object.keys(error.validationErrors).forEach((field) => {
+          if (field !== '_general') {
+            const fieldErrors = error.validationErrors[field];
+            // Pegar a primeira mensagem de erro do campo
+            const errorMessage = fieldErrors[0] || error.message;
+            setError(field, { 
+              type: 'manual', 
+              message: errorMessage 
+            });
+          }
+        });
+        // Se houver erros gerais, mostrar no alert
+        if (error.validationErrors._general && error.validationErrors._general.length > 0) {
+          showCustomAlert("Erro", error.validationErrors._general[0]);
+        }
+      } else {
+        const errorMessage = error.message || "Não foi possível salvar o aluno";
+        showCustomAlert("Erro", errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -257,31 +292,81 @@ export default function AlunosScreen() {
           <Controller
             control={control}
             name="email"
+            rules={{ 
+              required: "Email é obrigatório",
+              validate: (value) => {
+                if (!value || !value.trim()) {
+                  return "Email é obrigatório";
+                }
+                if (!value.includes("@")) {
+                  return "Email deve conter o símbolo '@'";
+                }
+                if (!value.includes(".")) {
+                  return "Email deve conter um domínio válido";
+                }
+                const emailParts = value.split("@");
+                if (emailParts.length !== 2 || !emailParts[0] || !emailParts[1]) {
+                  return "Email inválido";
+                }
+                return true;
+              }
+            }}
             render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Email"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-                mode="outlined"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+              <View>
+                <TextInput
+                  label="Email"
+                  value={value}
+                  onChangeText={onChange}
+                  style={styles.input}
+                  mode="outlined"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  error={!!errors.email}
+                />
+                {errors.email && (
+                  <Text style={styles.errorText}>{errors.email.message}</Text>
+                )}
+              </View>
             )}
           />
           <Controller
             control={control}
             name="telefone"
+            rules={{ 
+              required: "Telefone é obrigatório",
+              validate: (value) => {
+                if (!value || !value.trim()) {
+                  return "Telefone é obrigatório";
+                }
+                const numbers = value.replace(/\D/g, "");
+                if (numbers.length < 10) {
+                  return "Telefone deve conter pelo menos 10 dígitos";
+                }
+                if (numbers.length > 11) {
+                  return "Telefone deve conter no máximo 11 dígitos";
+                }
+                return true;
+              }
+            }}
             render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Telefone"
-                style={styles.input}
-                mode="outlined"
-                keyboardType="phone-pad"
-                value={value}
-                onChangeText={onChange}
-                placeholder="(00) 00000-0000"
-              />
+              <View>
+                <TextInput
+                  label="Telefone"
+                  style={styles.input}
+                  mode="outlined"
+                  keyboardType="phone-pad"
+                  value={value}
+                  onChangeText={(text) => {
+                    const formatted = formatPhoneNumber(text);
+                    onChange(formatted);
+                  }}
+                  placeholder="(00) 00000-0000"
+                  error={!!errors.telefone}
+                />
+                {errors.telefone && (
+                  <Text style={styles.errorText}>{errors.telefone.message}</Text>
+                )}
+              </View>
             )}
           />
           <Menu
@@ -341,4 +426,11 @@ const styles = StyleSheet.create({
   fab: { position: "absolute", right: 16, bottom: 16, zIndex: 10 },
   modal: { backgroundColor: "white", padding: 20, margin: 20, borderRadius: 8 },
   input: { marginBottom: 10, width: "100%" },
+  errorText: {
+    color: "red",
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 8,
+    marginLeft: 12,
+  },
 });

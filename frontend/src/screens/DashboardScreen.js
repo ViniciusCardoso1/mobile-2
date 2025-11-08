@@ -6,10 +6,12 @@ import {
   Dimensions,
   RefreshControl,
 } from "react-native";
-import { Text, Card, useTheme, IconButton, Chip } from "react-native-paper";
+import { Text, Card, useTheme, IconButton, Chip, Button } from "react-native-paper";
 import { LineChart, BarChart, PieChart } from "react-native-chart-kit";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAppData } from "../hooks/useAppData";
+import { useAuth } from "../contexts/AuthContext";
+import AwesomeAlert from "react-native-awesome-alerts";
 
 const { width: screenWidth } = Dimensions.get("window");
 const isSmallScreen = screenWidth < 600;
@@ -17,11 +19,18 @@ const isSmallScreen = screenWidth < 600;
 const DashboardScreen = () => {
   const theme = useTheme();
   const { data, loading, getStats, getChartData, refreshData } = useAppData();
+  const { logout, user } = useAuth();
+  const [showLogoutAlert, setShowLogoutAlert] = useState(false);
 
   const stats = getStats();
   const chartData = getChartData();
 
   const isLoading = Object.values(loading).some(Boolean);
+
+  const handleLogout = async () => {
+    setShowLogoutAlert(false);
+    await logout();
+  };
 
   const chartConfig = {
     backgroundColor: theme.colors.surface,
@@ -80,10 +89,24 @@ const DashboardScreen = () => {
         colors={[theme.colors.primary, theme.colors.accent]}
         style={styles.header}
       >
-        <Text style={styles.headerTitle}>Dashboard Acadêmico</Text>
-        <Text style={styles.headerSubtitle}>
-          Visão geral do sistema de gerenciamento
-        </Text>
+        <View style={styles.headerContent}>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Dashboard Acadêmico</Text>
+          
+            {user && (
+              <Text style={styles.headerUser}>
+                Olá, {user.username}
+              </Text>
+            )}
+          </View>
+          <IconButton
+            icon="logout"
+            iconColor="white"
+            size={24}
+            onPress={() => setShowLogoutAlert(true)}
+            style={styles.logoutButton}
+          />
+        </View>
       </LinearGradient>
 
       {/* Estatísticas principais */}
@@ -115,7 +138,7 @@ const DashboardScreen = () => {
           />
           <StatCard
             title="Média Geral"
-            value={stats.mediaGeral.toFixed(1)}
+            value={isNaN(stats.mediaGeral) || stats.mediaGeral === 0 ? "0.0" : stats.mediaGeral.toFixed(1)}
             subtitle={`${stats.totalNotas} notas`}
             icon="star"
             color="#06b6d4"
@@ -208,6 +231,23 @@ const DashboardScreen = () => {
       )}
 
       <View style={styles.bottomSpacing} />
+      
+      <AwesomeAlert
+        show={showLogoutAlert}
+        showProgress={false}
+        title="Confirmar Logout"
+        message="Deseja realmente sair do sistema?"
+        closeOnTouchOutside={true}
+        closeOnHardwareBackPress={false}
+        showCancelButton={true}
+        showConfirmButton={true}
+        cancelText="Cancelar"
+        confirmText="Sair"
+        confirmButtonColor={theme.colors.error}
+        cancelButtonColor={theme.colors.placeholder}
+        onConfirmPressed={handleLogout}
+        onCancelPressed={() => setShowLogoutAlert(false)}
+      />
     </ScrollView>
   );
 };
@@ -221,13 +261,33 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
     marginBottom: 20,
   },
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
   headerTitle: {
     color: "white",
     fontWeight: "700",
     marginBottom: 4,
     fontSize: 20,
   },
-  headerSubtitle: { color: "rgba(255, 255, 255, 0.8)" },
+  headerSubtitle: { 
+    color: "rgba(255, 255, 255, 0.8)",
+    marginBottom: 4,
+  },
+  headerUser: {
+    color: "rgba(255, 255, 255, 0.9)",
+    fontSize: 14,
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  logoutButton: {
+    margin: 0,
+  },
   statsContainer: { padding: 16, marginTop: -20 },
   statsRow: {
     flexDirection: "row",

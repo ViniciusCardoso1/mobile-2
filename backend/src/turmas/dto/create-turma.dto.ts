@@ -8,7 +8,7 @@ export class CreateTurmaDto {
 
   @IsString()
   @IsNotEmpty({ message: 'Código é obrigatório' })
-  @Length(3, 50, { message: 'Código deve ter entre 3 e 50 caracteres' })
+  @Length(1, 50, { message: 'Código deve ter entre 1 e 50 caracteres' })
   @Matches(/^[A-Z0-9]+$/, { message: 'Código deve conter apenas letras maiúsculas e números' })
   codigo: string;
 

@@ -137,24 +137,35 @@ export const useAppData = () => {
   // Estatísticas
   const getStats = useCallback(() => {
     const totalNotas = data.notas.length;
+    
+    // Filtrar notas válidas e converter para número
+    const notasValidas = data.notas
+      .map((nota) => {
+        const valorNota = Number(nota.nota);
+        return isNaN(valorNota) ? null : valorNota;
+      })
+      .filter((nota) => nota !== null);
+    
+    const totalNotasValidas = notasValidas.length;
+    
     const mediaGeral =
-      totalNotas > 0
-        ? data.notas.reduce((sum, nota) => sum + nota.nota, 0) / totalNotas
+      totalNotasValidas > 0
+        ? notasValidas.reduce((sum, nota) => sum + nota, 0) / totalNotasValidas
         : 0;
 
-    const aprovacoes = data.notas.filter((nota) => nota.nota >= 7).length;
-    const reprovacoes = data.notas.filter((nota) => nota.nota < 7).length;
+    const aprovacoes = notasValidas.filter((nota) => nota >= 7).length;
+    const reprovacoes = notasValidas.filter((nota) => nota < 7).length;
 
     return {
       totalTurmas: data.turmas.length,
       totalAlunos: data.alunos.length,
       totalProfessores: data.professores.length,
       totalDisciplinas: data.disciplinas.length,
-      totalNotas,
-      mediaGeral,
+      totalNotas: totalNotasValidas,
+      mediaGeral: isNaN(mediaGeral) ? 0 : mediaGeral,
       aprovacoes,
       reprovacoes,
-      taxaAprovacao: totalNotas > 0 ? (aprovacoes / totalNotas) * 100 : 0,
+      taxaAprovacao: totalNotasValidas > 0 ? (aprovacoes / totalNotasValidas) * 100 : 0,
     };
   }, [data]);
 
@@ -166,45 +177,64 @@ export const useAppData = () => {
 
     // 1. Média por Disciplina (BarChart)
     const notasPorDisciplina = disciplinas.map((disciplina) => {
-      const notasDisciplina = notas.filter(
-        (nota) => nota.disciplina === disciplina.id
-      );
+      // Normalizar: nota.disciplina pode ser ID (string) ou objeto com .id
+      const notasDisciplina = notas
+        .filter((nota) => {
+          // Verificar se a nota pertence à disciplina
+          const notaDisciplinaId = nota.disciplinaId || 
+                                   (nota.disciplina?.id || nota.disciplina) || 
+                                   "";
+          return String(notaDisciplinaId) === String(disciplina.id);
+        })
+        .map((nota) => {
+          const valorNota = Number(nota.nota);
+          return isNaN(valorNota) ? null : valorNota;
+        })
+        .filter((nota) => nota !== null);
+      
       const media =
         notasDisciplina.length > 0
-          ? notasDisciplina.reduce((sum, nota) => sum + nota.nota, 0) /
+          ? notasDisciplina.reduce((sum, nota) => sum + nota, 0) /
             notasDisciplina.length
           : 0;
       return {
         name: disciplina.nome.substring(0, 8), // Limita o nome para o gráfico
-        media: parseFloat(media.toFixed(1)),
+        media: isNaN(media) ? 0 : parseFloat(media.toFixed(1)),
       };
     });
 
     // 2. Distribuição de Notas (Chips/Tabela)
+    const notasValidas = notas
+      .map((n) => {
+        const valorNota = Number(n.nota);
+        return isNaN(valorNota) ? null : valorNota;
+      })
+      .filter((n) => n !== null);
+    
     const distribuicaoNotas = [
       {
         name: "0-3",
-        count: notas.filter((n) => n.nota >= 0 && n.nota < 3).length,
+        count: notasValidas.filter((n) => n >= 0 && n < 3).length,
         color: "#ef4444", // Vermelho
       },
       {
         name: "3-5",
-        count: notas.filter((n) => n.nota >= 3 && n.nota < 5).length,
+        count: notasValidas.filter((n) => n >= 3 && n < 5).length,
         color: "#f59e0b", // Laranja
       },
       {
         name: "5-7",
-        count: notas.filter((n) => n.nota >= 5 && n.nota < 7).length,
+        count: notasValidas.filter((n) => n >= 5 && n < 7).length,
         color: "#eab308", // Amarelo
       },
       {
         name: "7-8.5",
-        count: notas.filter((n) => n.nota >= 7 && n.nota < 8.5).length,
+        count: notasValidas.filter((n) => n >= 7 && n < 8.5).length,
         color: "#22c55e", // Verde Claro
       },
       {
         name: "8.5-10",
-        count: notas.filter((n) => n.nota >= 8.5 && n.nota <= 10).length,
+        count: notasValidas.filter((n) => n >= 8.5 && n <= 10).length,
         color: "#16a34a", // Verde Escuro
       },
     ];
