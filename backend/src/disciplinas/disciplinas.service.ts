@@ -29,6 +29,12 @@ export class DisciplinasService {
       );
     }
 
+    // Regra de negócio 2: Carga horária deve ser múltiplo de 10
+    if (createDisciplinaDto.carga_horaria % 10 !== 0) {
+      throw new BadRequestException(
+        'A carga horária deve ser um múltiplo de 10 horas',
+      );
+    }
 
     // Regra de negócio 3: Não permitir nome duplicado
     const existingByNome = await this.disciplinaRepository.findOne({
@@ -100,6 +106,12 @@ export class DisciplinasService {
       }
     }
 
+    // Regra de negócio 2: Carga horária deve ser múltiplo de 10 ao atualizar
+    if (updateDisciplinaDto.carga_horaria !== undefined && updateDisciplinaDto.carga_horaria % 10 !== 0) {
+      throw new BadRequestException(
+        'A carga horária deve ser um múltiplo de 10 horas',
+      );
+    }
 
     // Regra de negócio 3: Verificar nome duplicado ao atualizar
     if (updateDisciplinaDto.nome && updateDisciplinaDto.nome !== disciplina.nome) {
