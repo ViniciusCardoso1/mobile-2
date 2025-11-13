@@ -42,11 +42,15 @@ export class NotasService {
     }
 
     // Regra de negócio 3: Não permitir nota duplicada (mesmo aluno, mesma disciplina, mesma data)
+    // Converter data string (YYYY-MM-DD) para Date sem conversão de timezone
+    const [year, month, day] = createNotaDto.data.split('-').map(Number);
+    const dataDate = new Date(year, month - 1, day); // month é 0-indexed
+    
     const existingNota = await this.notaRepository.findOne({
       where: {
         alunoId: createNotaDto.aluno,
         disciplinaId: createNotaDto.disciplina,
-        data: new Date(createNotaDto.data),
+        data: dataDate,
       },
     });
     if (existingNota) {
@@ -56,11 +60,13 @@ export class NotasService {
     }
 
     const { aluno, disciplina, ...notaData } = createNotaDto;
+    // Reutilizar dataDate já criada acima
+    
     const nota = this.notaRepository.create({
       ...notaData,
       alunoId: aluno,
       disciplinaId: disciplina,
-      data: new Date(createNotaDto.data),
+      data: dataDate,
     });
     return await this.notaRepository.save(nota);
   }
@@ -144,15 +150,24 @@ export class NotasService {
     }
 
     // Regra de negócio 3: Não permitir nota duplicada ao atualizar
+    // Converter nota.data para Date se necessário (pode vir como string do banco)
+    const notaDataDate = nota.data instanceof Date ? nota.data : new Date(nota.data);
+    const notaDataString = notaDataDate.toISOString().split('T')[0];
+    
     if (
       (updateNotaDto.aluno || updateNotaDto.disciplina || updateNotaDto.data) &&
       !(updateNotaDto.aluno === nota.alunoId &&
         updateNotaDto.disciplina === nota.disciplinaId &&
-        (!updateNotaDto.data || updateNotaDto.data === nota.data.toISOString().split('T')[0]))
+        (!updateNotaDto.data || updateNotaDto.data === notaDataString))
     ) {
       const alunoId = updateNotaDto.aluno || nota.alunoId;
       const disciplinaId = updateNotaDto.disciplina || nota.disciplinaId;
-      const data = updateNotaDto.data ? new Date(updateNotaDto.data) : nota.data;
+      // Se updateNotaDto.data fornecida, converter sem timezone
+      let data = notaDataDate;
+      if (updateNotaDto.data) {
+        const [year, month, day] = updateNotaDto.data.split('-').map(Number);
+        data = new Date(year, month - 1, day); // month é 0-indexed
+      }
 
       const existingNota = await this.notaRepository.findOne({
         where: {
@@ -169,11 +184,18 @@ export class NotasService {
     }
 
     const { aluno, disciplina, ...notaData } = updateNotaDto;
+    // Se updateNotaDto.data fornecida, converter sem timezone
+    let dataFinal = notaDataDate;
+    if (updateNotaDto.data) {
+      const [year, month, day] = updateNotaDto.data.split('-').map(Number);
+      dataFinal = new Date(year, month - 1, day); // month é 0-indexed
+    }
+    
     Object.assign(nota, {
       ...notaData,
       alunoId: aluno || nota.alunoId,
       disciplinaId: disciplina || nota.disciplinaId,
-      data: updateNotaDto.data ? new Date(updateNotaDto.data) : nota.data,
+      data: dataFinal,
     });
     return await this.notaRepository.save(nota);
   }

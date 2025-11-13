@@ -52,18 +52,51 @@ const getValidationErrors = (error) => {
     if (typeof messages === 'string') {
       // Verificar se a mensagem menciona algum campo conhecido
       const fieldMappings = {
+        'matrícula': 'matricula',
+        'matricula': 'matricula',
+        'email': 'email',
+        'código': 'codigo',
+        'codigo': 'codigo',
         'carga horária': 'cargaHoraria',
         'carga horaria': 'cargaHoraria',
         'carga_horaria': 'cargaHoraria',
         'nome': 'nome',
-        'codigo': 'codigo',
         'departamento': 'departamento',
+        'período': 'periodo',
         'periodo': 'periodo',
         'capacidade': 'capacidade',
+        'professor': 'professor',
+        'aluno': 'aluno',
+        'disciplina': 'disciplina',
+        'turma': 'turma',
+        'nota': 'nota',
+        'titulação': 'titulacao',
+        'titulacao': 'titulacao',
+        'telefone': 'telefone',
       };
       
+      // Verificar se é uma mensagem de duplicata ou regra de negócio (não deve ser mapeada para campo específico)
+      const messageLower = messages.toLowerCase();
+      const isBusinessRuleError = 
+        messageLower.includes('já existe') ||
+        messageLower.includes('duplicad') ||
+        messageLower.includes('capacidade') ||
+        messageLower.includes('não é possível') ||
+        messageLower.includes('não encontrado') ||
+        messageLower.includes('não encontrada') ||
+        messageLower.includes('atingiu') ||
+        messageLower.includes('máximo') ||
+        messageLower.includes('mínimo');
+      
+      // Se for erro de regra de negócio, adicionar como erro geral
+      if (isBusinessRuleError) {
+        errors._general = [messages];
+        return errors;
+      }
+      
+      // Buscar por campo na mensagem (case insensitive)
       for (const [key, value] of Object.entries(fieldMappings)) {
-        if (messages.toLowerCase().includes(key.toLowerCase())) {
+        if (messageLower.includes(key.toLowerCase())) {
           if (!errors[value]) {
             errors[value] = [];
           }
@@ -83,10 +116,15 @@ const getValidationErrors = (error) => {
       messages.forEach((msg) => {
         // Mapear campos conhecidos (português e inglês)
         const fieldMappings = {
+          'matrícula': 'matricula',
+          'matricula': 'matricula',
+          'email': 'email',
           'nome': 'nome',
           'name': 'nome',
+          'código': 'codigo',
           'codigo': 'codigo',
           'code': 'codigo',
+          'período': 'periodo',
           'periodo': 'periodo',
           'period': 'periodo',
           'capacidade': 'capacidade',
@@ -99,7 +137,41 @@ const getValidationErrors = (error) => {
           'carga horaria': 'cargaHoraria',
           'departamento': 'departamento',
           'department': 'departamento',
+          'aluno': 'aluno',
+          'student': 'aluno',
+          'disciplina': 'disciplina',
+          'subject': 'disciplina',
+          'turma': 'turma',
+          'class': 'turma',
+          'nota': 'nota',
+          'grade': 'nota',
+          'titulação': 'titulacao',
+          'titulacao': 'titulacao',
+          'telefone': 'telefone',
+          'phone': 'telefone',
         };
+        
+        // Verificar se é uma mensagem de duplicata ou regra de negócio (não deve ser mapeada para campo específico)
+        const msgLower = msg.toLowerCase();
+        const isBusinessRuleError = 
+          msgLower.includes('já existe') ||
+          msgLower.includes('duplicad') ||
+          msgLower.includes('capacidade') ||
+          msgLower.includes('não é possível') ||
+          msgLower.includes('não encontrado') ||
+          msgLower.includes('não encontrada') ||
+          msgLower.includes('atingiu') ||
+          msgLower.includes('máximo') ||
+          msgLower.includes('mínimo');
+        
+        // Se for erro de regra de negócio, adicionar como erro geral
+        if (isBusinessRuleError) {
+          if (!errors._general) {
+            errors._general = [];
+          }
+          errors._general.push(msg);
+          return; // Usar return ao invés de continue no forEach
+        }
         
         // Tentar extrair o nome do campo da mensagem
         let fieldName = null;

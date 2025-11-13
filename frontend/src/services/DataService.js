@@ -55,11 +55,12 @@ class DataService {
       return newItem;
     } catch (apiError) {
       console.error(
-        `Erro ao adicionar item na API para ${resource}. Tentando AsyncStorage...`,
+        `Erro ao adicionar item na API para ${resource}:`,
         apiError
       );
-      // 3. Em caso de falha na API, adiciona no AsyncStorage
-      return StorageService.addItem(key, item);
+      // Não fazer fallback para AsyncStorage - lançar o erro para que a tela possa tratá-lo
+      // Erros de regra de negócio devem ser exibidos ao usuário, não silenciados
+      throw apiError;
     }
   }
 
@@ -85,11 +86,12 @@ class DataService {
       return updated;
     } catch (apiError) {
       console.error(
-        `Erro ao atualizar item na API para ${resource}. Tentando AsyncStorage...`,
+        `Erro ao atualizar item na API para ${resource}:`,
         apiError
       );
-      // 3. Em caso de falha na API, atualiza no AsyncStorage
-      return StorageService.updateItem(key, id, updatedItem);
+      // Não fazer fallback para AsyncStorage - lançar o erro para que a tela possa tratá-lo
+      // Erros de regra de negócio devem ser exibidos ao usuário, não silenciados
+      throw apiError;
     }
   }
 

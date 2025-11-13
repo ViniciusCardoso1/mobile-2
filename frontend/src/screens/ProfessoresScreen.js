@@ -161,9 +161,11 @@ export default function ProfessoresScreen() {
       closeModal();
     } catch (error) {
       // Se houver erros de validação do backend, mapear para os campos
+      let hasFieldErrors = false;
       if (error.validationErrors) {
         Object.keys(error.validationErrors).forEach((field) => {
           if (field !== '_general') {
+            hasFieldErrors = true;
             const fieldErrors = error.validationErrors[field];
             // Pegar a primeira mensagem de erro do campo
             const errorMessage = fieldErrors[0] || error.message;
@@ -176,6 +178,14 @@ export default function ProfessoresScreen() {
         // Se houver erros gerais, mostrar no alert
         if (error.validationErrors._general && error.validationErrors._general.length > 0) {
           showCustomAlert("Erro", error.validationErrors._general[0]);
+        } else if (!hasFieldErrors) {
+          // Se não houver erros de campo específicos, mostrar mensagem geral
+          const errorMessage = error.message || "Não foi possível salvar o professor";
+          showCustomAlert("Erro", errorMessage);
+        } else {
+          // Se houver erros de campo, também mostrar mensagem geral para garantir que o usuário veja
+          const errorMessage = error.message || "Não foi possível salvar o professor. Verifique os campos destacados.";
+          showCustomAlert("Erro", errorMessage);
         }
       } else {
         const errorMessage = error.message || "Não foi possível salvar o professor";
@@ -260,14 +270,20 @@ export default function ProfessoresScreen() {
             name="codigo"
             rules={{ required: true }}
             render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Código"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-                mode="outlined"
-                autoCapitalize="characters"
-              />
+              <View>
+                <TextInput
+                  label="Código"
+                  value={value}
+                  onChangeText={onChange}
+                  style={styles.input}
+                  mode="outlined"
+                  autoCapitalize="characters"
+                  error={!!errors.codigo}
+                />
+                {errors.codigo && (
+                  <Text style={styles.errorText}>{errors.codigo.message}</Text>
+                )}
+              </View>
             )}
           />
           <Controller

@@ -155,6 +155,10 @@ export default function DisciplinasScreen() {
           // Se não houver erros de campo específicos, mostrar mensagem geral
           const errorMessage = error.message || "Não foi possível salvar a disciplina";
           showCustomAlert("Erro", errorMessage);
+        } else {
+          // Se houver erros de campo, também mostrar mensagem geral para garantir que o usuário veja
+          const errorMessage = error.message || "Não foi possível salvar a disciplina. Verifique os campos destacados.";
+          showCustomAlert("Erro", errorMessage);
         }
       } else {
         const errorMessage = error.message || "Não foi possível salvar a disciplina";

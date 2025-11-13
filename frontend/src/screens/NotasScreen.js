@@ -182,8 +182,43 @@ const NotasScreen = () => {
       await loadData();
       closeModal();
     } catch (error) {
-      const errorMessage = error.message || "Não foi possível salvar a nota";
-      showCustomAlert("Erro", errorMessage);
+      // Se houver erros de validação do backend, mapear para os campos
+      let errorShown = false;
+      if (error.validationErrors) {
+        let hasFieldErrors = false;
+        Object.keys(error.validationErrors).forEach((field) => {
+          if (field !== '_general') {
+            hasFieldErrors = true;
+            const fieldErrors = error.validationErrors[field];
+            const errorMessage = fieldErrors[0] || error.message;
+            setError(field, { 
+              type: 'manual', 
+              message: errorMessage 
+            });
+          }
+        });
+        // Se houver erros gerais, mostrar no alert (prioridade)
+        if (error.validationErrors._general && error.validationErrors._general.length > 0) {
+          showCustomAlert("Erro", error.validationErrors._general[0]);
+          errorShown = true;
+        } else if (!hasFieldErrors) {
+          // Se não houver erros de campo específicos, mostrar mensagem geral
+          const errorMessage = error.message || "Não foi possível salvar a nota";
+          showCustomAlert("Erro", errorMessage);
+          errorShown = true;
+        } else {
+          // Se houver erros de campo, também mostrar mensagem geral para garantir que o usuário veja
+          const errorMessage = error.message || "Não foi possível salvar a nota. Verifique os campos destacados.";
+          showCustomAlert("Erro", errorMessage);
+          errorShown = true;
+        }
+      }
+      
+      // Garantir que sempre mostre o erro, mesmo se não houver validationErrors
+      if (!errorShown) {
+        const errorMessage = error.message || "Não foi possível salvar a nota";
+        showCustomAlert("Erro", errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -238,7 +273,15 @@ const NotasScreen = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
+    // Se já for uma string no formato YYYY-MM-DD, formatar diretamente
+    if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateString)) {
+      const [year, month, day] = dateString.split('T')[0].split('-');
+      return `${day}/${month}/${year}`;
+    }
+    // Se for Date ou outra string, converter
     const date = new Date(dateString);
+    // Verificar se a data é válida
+    if (isNaN(date.getTime())) return "";
     return date.toLocaleDateString("pt-BR");
   };
 

@@ -1,11 +1,15 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { JwtService } from '@nestjs/jwt';
-import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
-import { User } from './entities/user.entity';
-import * as bcrypt from 'bcrypt';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { JwtService } from "@nestjs/jwt";
+import { LoginDto } from "./dto/login.dto";
+import { RegisterDto } from "./dto/register.dto";
+import { User } from "./entities/user.entity";
+import * as bcrypt from "bcrypt";
 
 @Injectable()
 export class AuthService {
@@ -21,7 +25,7 @@ export class AuthService {
       where: { username: registerDto.username },
     });
     if (existingUserByUsername) {
-      throw new ConflictException('Username já está em uso');
+      throw new ConflictException("Username já está em uso");
     }
 
     // Verificar se email já existe
@@ -29,7 +33,7 @@ export class AuthService {
       where: { email: registerDto.email },
     });
     if (existingUserByEmail) {
-      throw new ConflictException('Email já está em uso');
+      throw new ConflictException("Email já está em uso");
     }
 
     // Hash da senha
@@ -40,7 +44,7 @@ export class AuthService {
       username: registerDto.username,
       email: registerDto.email,
       password: hashedPassword,
-      role: 'user',
+      role: "user",
     });
 
     const savedUser = await this.userRepository.save(user);
@@ -65,7 +69,7 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const user = await this.validateUser(loginDto.username, loginDto.password);
     if (!user) {
-      throw new UnauthorizedException('Credenciais inválidas');
+      throw new UnauthorizedException("Credenciais inválidas");
     }
     const payload = { username: user.username, sub: user.id, role: user.role };
     return {
@@ -79,4 +83,3 @@ export class AuthService {
     };
   }
 }
-
